@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://navilesh-creat.github.io/Klyro/sitemap.xml
