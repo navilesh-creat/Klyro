@@ -218,11 +218,12 @@ document.addEventListener('keydown', (e) => { if(e.key === 'Escape' && overlay.c
    ========================================================= */
 function renderImageTool(root){
   root.appendChild(el(`
+    <div>
     <label class="dropzone" id="dz">
       <strong>Tap to choose an image</strong><br>or drop it here
       <input type="file" id="imgInput" accept="image/*" />
     </label>
-    <div id="imgControls" style="display:none; display:flex; flex-direction:column; gap:16px;">
+    <div id="imgControls" style="display:none; flex-direction:column; gap:16px;">
       <div>
         <span class="field-label">Output format</span>
         <select id="imgFormat">
@@ -245,6 +246,7 @@ function renderImageTool(root){
       </div>
       <img id="imgPreview" class="preview-img" style="display:none;" />
       <button class="btn btn-block" id="downloadImgBtn" disabled>Download</button>
+    </div>
     </div>
   `));
 
@@ -326,6 +328,7 @@ function renderImageTool(root){
 function renderQrTool(root){
   root.appendChild(el(`
     <div>
+    <div>
       <span class="field-label">Text or link</span>
       <input type="text" id="qrText" placeholder="https://example.com" />
     </div>
@@ -342,6 +345,7 @@ function renderQrTool(root){
     <div class="qr-preview" id="qrPreview"><canvas id="qrCanvas" width="220" height="220"></canvas></div>
     <button class="btn btn-block" id="qrDownload">Download PNG</button>
     <p class="hint">Colors accept any CSS hex value, like #9b5cff.</p>
+    </div>
   `));
 
   const textInput = $('#qrText', root);
@@ -371,6 +375,7 @@ function debounce(fn, ms){ let t; return (...a) => { clearTimeout(t); t = setTim
    ========================================================= */
 function renderWordCounter(root){
   root.appendChild(el(`
+    <div>
     <textarea id="wcInput" placeholder="Paste or type your text here…" style="min-height:180px;"></textarea>
     <div class="stat-grid">
       <div class="stat-box"><div class="num" id="wWords">0</div><div class="lab">words</div></div>
@@ -379,6 +384,7 @@ function renderWordCounter(root){
       <div class="stat-box"><div class="num" id="wSentences">0</div><div class="lab">sentences</div></div>
       <div class="stat-box"><div class="num" id="wParas">0</div><div class="lab">paragraphs</div></div>
       <div class="stat-box"><div class="num" id="wRead">0 min</div><div class="lab">read time</div></div>
+    </div>
     </div>
   `));
   const input = $('#wcInput', root);
@@ -411,6 +417,7 @@ function renderWordCounter(root){
 function renderPasswordTool(root){
   root.appendChild(el(`
     <div>
+    <div>
       <span class="field-label">Length</span>
       <div class="slider-row">
         <input type="range" id="pwLen" min="6" max="48" value="16" />
@@ -437,6 +444,7 @@ function renderPasswordTool(root){
     <div class="btn-row">
       <button class="btn" id="pwGenerate" style="flex:1;">Generate</button>
       <button class="btn btn-secondary" id="pwCopy" style="flex:1;">Copy</button>
+    </div>
     </div>
   `));
 
@@ -492,6 +500,7 @@ function renderPasswordTool(root){
    ========================================================= */
 function renderPdfMerge(root){
   root.appendChild(el(`
+    <div>
     <label class="dropzone" id="dzPdf">
       <strong>Tap to choose PDFs</strong><br>or drop them here — add as many as you like
       <input type="file" id="pdfInput" accept="application/pdf" multiple />
@@ -499,6 +508,7 @@ function renderPdfMerge(root){
     <div class="file-list" id="pdfList"></div>
     <button class="btn btn-block" id="mergeBtn" disabled>Merge & download</button>
     <p class="hint">Files merge in the order shown — use the arrows to reorder.</p>
+    </div>
   `));
 
   const dz = $('#dzPdf', root), input = $('#pdfInput', root);
@@ -570,12 +580,14 @@ function renderPdfMerge(root){
    ========================================================= */
 function renderImagesToPdf(root){
   root.appendChild(el(`
+    <div>
     <label class="dropzone" id="dzImg2Pdf">
       <strong>Tap to choose images</strong><br>or drop them here — one page per image
       <input type="file" id="img2pdfInput" accept="image/png,image/jpeg" multiple />
     </label>
     <div class="file-list" id="img2pdfList"></div>
     <button class="btn btn-block" id="img2pdfBtn" disabled>Create PDF</button>
+    </div>
   `));
 
   const dz = $('#dzImg2Pdf', root), input = $('#img2pdfInput', root);
@@ -643,6 +655,7 @@ function renderImagesToPdf(root){
    ========================================================= */
 function renderCaseConverter(root){
   root.appendChild(el(`
+    <div>
     <textarea id="caseInput" placeholder="Type or paste text…"></textarea>
     <div class="pill-row">
       <button class="pill-btn" data-c="upper">UPPERCASE</button>
@@ -655,6 +668,7 @@ function renderCaseConverter(root){
     </div>
     <textarea id="caseOutput" placeholder="Result appears here…" readonly></textarea>
     <button class="btn btn-secondary btn-block" id="caseCopy">Copy result</button>
+    </div>
   `));
   const input = $('#caseInput', root);
   const output = $('#caseOutput', root);
@@ -691,6 +705,7 @@ function renderCaseConverter(root){
 function renderJsonCsv(root){
   root.appendChild(el(`
     <div>
+    <div>
       <span class="field-label">Direction</span>
       <select id="jcDir">
         <option value="j2c">JSON → CSV</option>
@@ -701,6 +716,7 @@ function renderJsonCsv(root){
     <button class="btn btn-block" id="jcConvert">Convert</button>
     <textarea id="jcOutput" placeholder="Result appears here…" readonly></textarea>
     <button class="btn btn-secondary btn-block" id="jcCopy">Copy result</button>
+    </div>
   `));
 
   const dir = $('#jcDir', root), input = $('#jcInput', root), output = $('#jcOutput', root);
@@ -763,6 +779,7 @@ function renderJsonCsv(root){
 function renderDiffTool(root){
   root.appendChild(el(`
     <div>
+    <div>
       <span class="field-label">Original text</span>
       <textarea id="diffA" style="min-height:100px;"></textarea>
     </div>
@@ -772,6 +789,7 @@ function renderDiffTool(root){
     </div>
     <button class="btn btn-block" id="diffRun">Compare</button>
     <div class="diff-box" id="diffOut" style="display:none;"></div>
+    </div>
   `));
 
   const a = $('#diffA', root), b = $('#diffB', root);
