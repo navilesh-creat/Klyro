@@ -1,5 +1,5 @@
 /* =========================================================
-   Klyro PDF Organizer — Full-Page Styles
+   Klyro PDF Organizer — v2 Styles (redesigned)
    ========================================================= */
 
 /* ---------- tokens ---------- */
@@ -197,9 +197,11 @@ button{font-family:inherit; cursor:pointer;}
   position:relative;
   background:var(--panel-solid); border:1.5px solid var(--border);
   border-radius:var(--radius-md); overflow:hidden;
-  cursor:pointer; transition:all .25s var(--ease);
+  cursor:pointer;
+  transition:border-color .2s var(--ease), transform .2s var(--ease), box-shadow .2s var(--ease), background .2s var(--ease);
   display:flex; flex-direction:column;
   user-select:none; -webkit-user-select:none;
+  will-change:transform;
 }
 .page-card:hover{
   border-color:rgba(79,124,255,0.35);
@@ -238,6 +240,7 @@ button{font-family:inherit; cursor:pointer;}
   color:rgba(255,255,255,0.5);
   display:flex; align-items:center; justify-content:center;
   cursor:grab; transition:all .15s;
+  font-size:14px; line-height:1;
 }
 .page-drag:hover{ background:rgba(0,0,0,0.7); color:#fff; }
 .page-drag:active{ cursor:grabbing; }
@@ -256,12 +259,26 @@ button{font-family:inherit; cursor:pointer;}
   color:#999; font-size:0.72rem; font-style:italic;
 }
 
+/* thumb placeholder (loading state) */
+.thumb-placeholder{
+  display:flex; align-items:center; justify-content:center;
+  width:100%; height:100%;
+  background:#f5f5f5;
+  color:#ccc;
+  animation:thumbPulse 1.5s ease-in-out infinite;
+}
+@keyframes thumbPulse{
+  0%,100%{ opacity:0.5; }
+  50%{ opacity:1; }
+}
+
 /* rotation badge */
 .page-rot{
   position:absolute; bottom:36px; right:6px; z-index:2;
   background:rgba(0,0,0,0.65); color:#fff;
   font-size:0.6rem; font-weight:600; padding:2px 7px;
   border-radius:4px; display:none;
+  backdrop-filter:blur(4px);
 }
 .page-card.has-rot .page-rot{ display:block; }
 
@@ -280,6 +297,12 @@ button{font-family:inherit; cursor:pointer;}
 }
 .page-btns button:hover{ background:rgba(255,255,255,0.1); color:var(--text); }
 .page-btns button.del:hover{ color:var(--red); background:rgba(255,107,107,0.12); }
+
+/* touch clone (ghost during drag) */
+.touch-clone{
+  border-color:var(--blue-2) !important;
+  box-shadow:0 12px 40px rgba(0,0,0,0.5) !important;
+}
 
 /* ---------- toast ---------- */
 .toast{
@@ -371,13 +394,36 @@ button{font-family:inherit; cursor:pointer;}
 .export-field{ display:flex; flex-direction:column; gap:6px; }
 .field-label{ font-size:0.82rem; font-weight:600; color:var(--text-dim); }
 .field-hint{ font-size:0.72rem; color:var(--text-dimmer); }
-input[type="text"]{
+
+/* inputs & selects */
+input[type="text"],
+input[type="url"],
+input[type="number"],
+textarea,
+select{
   width:100%; background:rgba(255,255,255,0.04);
   border:1px solid var(--border); border-radius:var(--radius-sm);
   padding:10px 14px; color:var(--text); font-family:inherit; font-size:0.9rem;
   transition:border-color .2s, box-shadow .2s;
+  appearance:none; -webkit-appearance:none;
 }
-input[type="text"]:focus{ outline:none; border-color:var(--blue-2); box-shadow:0 0 0 3px rgba(79,124,255,0.12); }
+input[type="text"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus{
+  outline:none; border-color:var(--blue-2);
+  box-shadow:0 0 0 3px rgba(79,124,255,0.12);
+}
+select{
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%239aa1c2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position: right 12px center;
+  padding-right:36px; color-scheme:dark;
+}
+select option{
+  background:#0d1024; color:#eef0fb; padding:10px;
+}
+
 .btn{
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
   padding:12px 20px; border-radius:999px; border:none;
@@ -389,6 +435,14 @@ input[type="text"]:focus{ outline:none; border-color:var(--blue-2); box-shadow:0
 .btn:hover{ transform:translateY(-2px); box-shadow:0 14px 32px -10px rgba(107,92,255,0.7); }
 .btn:active{ transform:translateY(0) scale(0.97); }
 .btn-block{ width:100%; }
+
+/* metadata card in panel */
+.meta-card{
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm);
+  padding:12px;
+}
 
 /* ---------- mobile bar ---------- */
 .mobile-bar{
