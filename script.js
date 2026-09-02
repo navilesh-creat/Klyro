@@ -1079,116 +1079,183 @@ function renderPdfOrganizer(root){
     return;
   }
 
-  // initialise pdf.js worker for thumbnail rendering
   const pdfjsAvailable = typeof pdfjsLib !== 'undefined';
   if(pdfjsAvailable && !pdfjsLib._workerSet){
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     pdfjsLib._workerSet = true;
   }
 
+  /* --- initial HTML: upload + editor shell --- */
   root.appendChild(el(`
-    <label class="dropzone" id="dzPdfOrg">
-      <strong>Tap to choose a PDF</strong><br>or drop it here
-      <input type="file" id="pdfOrgInput" accept="application/pdf" />
-    </label>
-    <div id="orgControls" style="display:none; flex-direction:column; gap:14px;">
-      <div class="check-row" style="margin-bottom:4px;">
-        <input type="checkbox" id="orgSelectAll" /><label for="orgSelectAll">Select all pages</label>
+    <div id="orgUpload">
+      <label class="dropzone dropzone-lg" id="dzPdfOrg" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:44px 20px;">
+        <svg viewBox="0 0 24 24" fill="none" width="38" height="38" style="color:var(--text-dimmer);"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 18v-6M9 15l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <strong style="font-size:1.05rem;">Drop a PDF here</strong>
+        <span style="color:var(--text-dim); font-size:0.88rem;">or click to browse</span>
+        <input type="file" id="pdfOrgInput" accept="application/pdf" />
+      </label>
+    </div>
+    <div class="pdf-org-editor" id="orgEditor" style="display:none;">
+      <div class="pdf-org-toolbar">
+        <div class="pdf-org-toolbar-group">
+          <span class="pdf-org-page-count" id="orgPageCount">0 pages</span>
+        </div>
+        <div class="pdf-org-toolbar-sep"></div>
+        <div class="pdf-org-toolbar-group">
+          <button class="pdf-org-tool-btn" id="orgSelectAll">Select all</button>
+          <button class="pdf-org-tool-btn" id="orgDeselectAll">Deselect</button>
+        </div>
+        <div class="pdf-org-toolbar-sep"></div>
+        <div class="pdf-org-toolbar-group">
+          <button class="pdf-org-tool-btn danger" id="orgDeleteSel" disabled>Delete selected</button>
+          <button class="pdf-org-tool-btn" id="orgExtract" disabled>Extract selected</button>
+        </div>
+        <div style="flex:1;"></div>
+        <div class="pdf-org-toolbar-group">
+          <button class="pdf-org-tool-btn" id="orgAddBlank">+ Blank</button>
+          <button class="btn" id="orgDownload" disabled>Download PDF</button>
+        </div>
       </div>
-      <div class="file-list" id="orgPageList"></div>
-      <div class="btn-row">
-        <button class="btn btn-secondary" id="orgAddBlank">+ Blank page</button>
-        <button class="btn btn-secondary" id="orgExtract" disabled>Extract selected</button>
-      </div>
-      <button class="btn btn-block" id="orgDownload" disabled>Download PDF</button>
+      <div class="pdf-org-grid" id="orgGrid"></div>
     </div>
   `));
 
   const dz = $('#dzPdfOrg', root), input = $('#pdfOrgInput', root);
-  const controls = $('#orgControls', root);
-  const list = $('#orgPageList', root);
+  const upload = $('#orgUpload', root), editor = $('#orgEditor', root);
+  const grid = $('#orgGrid', root);
+  const pageCountEl = $('#orgPageCount', root);
   const downloadBtn = $('#orgDownload', root);
   const extractBtn = $('#orgExtract', root);
-  const selectAllCb = $('#orgSelectAll', root);
+  const deleteSelBtn = $('#orgDeleteSel', root);
   let pdfDoc = null, pdfjsDoc = null, pages = [], fileName = 'klyro-document';
 
-  // pages[] items: { pageIndex (number|null for blank), rotation: 0|90|180|270, selected: false }
+  /* --- update toolbar state --- */
+  function updateToolbar(){
+    const n = pages.length;
+    pageCountEl.textContent = `${n} page${n !== 1 ? 's' : ''}`;
+    const sel = pages.filter(p => p.selected).length;
+    extractBtn.disabled = sel === 0;
+    deleteSelBtn.disabled = sel === 0;
+    downloadBtn.disabled = n === 0;
+    extractBtn.textContent = sel > 0 ? `Extract (${sel})` : 'Extract selected';
+    deleteSelBtn.textContent = sel > 0 ? `Delete (${sel})` : 'Delete selected';
+  }
 
   /* --- thumbnail rendering via pdf.js --- */
   async function renderThumbnails(){
     if(!pdfjsAvailable || !pdfjsDoc) return;
-    const THUMB_W = 40, THUMB_H = 56;
     for(let i = 0; i < pages.length; i++){
       const pg = pages[i];
-      const wrap = list.querySelector(`[data-page="${i}"] .pdf-thumb-wrap`);
-      if(!wrap || pg.pageIndex === null) continue; // skip blank pages
+      const card = grid.querySelector(`[data-page="${i}"]`);
+      if(!card || pg.pageIndex === null) continue;
+      const thumb = card.querySelector('.pdf-org-page-thumb');
+      if(!thumb || thumb.querySelector('canvas')) continue; // already rendered
       try{
-        const page = await pdfjsDoc.getPage(pg.pageIndex + 1); // pdf.js is 1-indexed
-        const vp = page.getViewport({ scale: 1 });
-        const scale = Math.min(THUMB_W / vp.width, THUMB_H / vp.height);
+        const page = await pdfjsDoc.getPage(pg.pageIndex + 1);
+        const vp0 = page.getViewport({ scale: 1 });
+        const targetW = 200;
+        const scale = targetW / vp0.width;
         const viewport = page.getViewport({ scale });
         const canvas = document.createElement('canvas');
-        canvas.width = Math.round(viewport.width * (window.devicePixelRatio || 1));
-        canvas.height = Math.round(viewport.height * (window.devicePixelRatio || 1));
-        canvas.style.width = Math.round(viewport.width) + 'px';
-        canvas.style.height = Math.round(viewport.height) + 'px';
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(viewport.width * dpr);
+        canvas.height = Math.round(viewport.height * dpr);
+        canvas.style.width = '100%';
+        canvas.style.height = 'auto';
         const ctx = canvas.getContext('2d');
-        ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+        ctx.scale(dpr, dpr);
         await page.render({ canvasContext: ctx, viewport }).promise;
-        wrap.innerHTML = '';
-        wrap.appendChild(canvas);
-      }catch(e){
-        // rendering failed — leave the placeholder
-      }
+        thumb.innerHTML = '';
+        thumb.appendChild(canvas);
+      }catch(e){ /* leave placeholder */ }
     }
   }
 
+  /* --- render page grid cards --- */
   function renderPages(){
-    list.innerHTML = '';
+    grid.innerHTML = '';
     pages.forEach((pg, i) => {
-      const rotationLabel = pg.rotation ? ` ${pg.rotation}°` : '';
-      const thumbContent = pg.pageIndex === null
-        ? '<div class="pdf-thumb-blank">blank</div>'
+      const rotClass = pg.rotation ? ' has-rotation' : '';
+      const selClass = pg.selected ? ' selected' : '';
+      const thumbInner = pg.pageIndex === null
+        ? '<div class="pdf-org-page-blank">Blank page</div>'
         : '';
-      const rotationStyle = pg.rotation ? ` style="transform:rotate(${pg.rotation}deg);"` : '';
-      const row = el(`
-        <div class="file-row" data-page="${i}" style="gap:8px;">
-          <input type="checkbox" data-role="sel" ${pg.selected ? 'checked' : ''} style="width:auto; accent-color:var(--blue-2);" />
-          <div class="order-btns">
-            <button data-act="up" title="Move up">▲</button>
-            <button data-act="down" title="Move down">▼</button>
+      const card = el(`
+        <div class="pdf-org-page${rotClass}${selClass}" data-page="${i}">
+          <div class="pdf-org-page-check"><input type="checkbox" data-role="sel" ${pg.selected ? 'checked' : ''} /></div>
+          <div class="pdf-org-page-thumb">${thumbInner}</div>
+          <span class="pdf-org-page-rot">↻ ${pg.rotation}°</span>
+          <div class="pdf-org-page-footer">
+            <span class="pdf-org-page-num">${i + 1}</span>
+            <div class="pdf-org-page-btns">
+              <button data-act="left" title="Move left">◀</button>
+              <button data-act="right" title="Move right">▶</button>
+              <button data-act="rotate" title="Rotate 90°">↻</button>
+              <button data-act="dup" title="Duplicate">⧉</button>
+              <button data-act="del" class="del" title="Delete">✕</button>
+            </div>
           </div>
-          <div class="pdf-thumb-wrap"${rotationStyle}>${thumbContent}</div>
-          <span class="fname">Page ${i + 1}${pg.pageIndex === null ? ' (blank)' : ''}${rotationLabel}</span>
-          <span class="fsize" style="display:flex; gap:4px;">
-            <button data-act="rotate" title="Rotate 90°" style="background:none;border:none;color:var(--text-dimmer);cursor:pointer;font-size:13px;" >↻</button>
-            <button data-act="dup" title="Duplicate" style="background:none;border:none;color:var(--text-dimmer);cursor:pointer;font-size:13px;">⧉</button>
-            <button data-act="remove" title="Remove" style="background:none;border:none;color:var(--text-dimmer);cursor:pointer;font-size:13px;">✕</button>
-          </span>
         </div>
       `);
-      row.querySelector('[data-role="sel"]').addEventListener('change', (e) => { pages[i].selected = e.target.checked; updateExtractBtn(); });
-      row.querySelector('[data-act="up"]').addEventListener('click', () => { if(i > 0){ [pages[i-1], pages[i]] = [pages[i], pages[i-1]]; renderPages(); renderThumbnails(); } });
-      row.querySelector('[data-act="down"]').addEventListener('click', () => { if(i < pages.length-1){ [pages[i+1], pages[i]] = [pages[i], pages[i+1]]; renderPages(); renderThumbnails(); } });
-      row.querySelector('[data-act="rotate"]').addEventListener('click', () => { pages[i].rotation = (pages[i].rotation + 90) % 360; renderPages(); renderThumbnails(); });
-      row.querySelector('[data-act="dup"]').addEventListener('click', () => { pages.splice(i + 1, 0, { ...pg, selected: false }); renderPages(); renderThumbnails(); });
-      row.querySelector('[data-act="remove"]').addEventListener('click', () => { if(pages.length <= 1){ toast('PDF must have at least one page'); return; } pages.splice(i, 1); renderPages(); renderThumbnails(); });
-      list.appendChild(row);
+
+      // checkbox
+      card.querySelector('[data-role="sel"]').addEventListener('change', (e) => {
+        pages[i].selected = e.target.checked;
+        card.classList.toggle('selected', e.target.checked);
+        updateToolbar();
+      });
+      // click card to toggle selection
+      card.addEventListener('click', (e) => {
+        if(e.target.closest('.pdf-org-page-btns') || e.target.closest('.pdf-org-page-check')) return;
+        pages[i].selected = !pages[i].selected;
+        card.classList.toggle('selected', pages[i].selected);
+        card.querySelector('[data-role="sel"]').checked = pages[i].selected;
+        updateToolbar();
+      });
+
+      // move left
+      card.querySelector('[data-act="left"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if(i > 0){ [pages[i-1], pages[i]] = [pages[i], pages[i-1]]; renderPages(); renderThumbnails(); }
+      });
+      // move right
+      card.querySelector('[data-act="right"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if(i < pages.length - 1){ [pages[i+1], pages[i]] = [pages[i], pages[i+1]]; renderPages(); renderThumbnails(); }
+      });
+      // rotate
+      card.querySelector('[data-act="rotate"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        pages[i].rotation = (pages[i].rotation + 90) % 360;
+        renderPages(); renderThumbnails();
+      });
+      // duplicate
+      card.querySelector('[data-act="dup"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        pages.splice(i + 1, 0, { ...pg, selected: false });
+        renderPages(); renderThumbnails();
+        toast('Page duplicated');
+      });
+      // delete
+      card.querySelector('[data-act="del"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if(pages.length <= 1){ toast('PDF must have at least one page'); return; }
+        pages.splice(i, 1);
+        renderPages(); renderThumbnails();
+      });
+
+      grid.appendChild(card);
     });
-    downloadBtn.disabled = pages.length === 0;
-    updateExtractBtn();
+    updateToolbar();
   }
 
-  function updateExtractBtn(){
-    extractBtn.disabled = !pages.some(p => p.selected);
-  }
-
+  /* --- build PDF from pages array --- */
   async function buildPdf(pageList){
     const { PDFDocument } = PDFLib;
     const newPdf = await PDFDocument.create();
     for(const pg of pageList){
       if(pg.pageIndex === null){
-        const page = newPdf.addPage([595.28, 841.89]); // A4
+        const page = newPdf.addPage([595.28, 841.89]);
         if(pg.rotation) page.setRotation(PDFLib.degrees(pg.rotation));
       } else {
         const [copiedPage] = await newPdf.copyPages(pdfDoc, [pg.pageIndex]);
@@ -1199,6 +1266,7 @@ function renderPdfOrganizer(root){
     return newPdf;
   }
 
+  /* --- load PDF --- */
   async function loadPdf(file){
     if(!file || file.type !== 'application/pdf'){ toast('Please choose a PDF file'); return; }
     fileName = file.name.replace(/\.pdf$/i, '') || 'document';
@@ -1208,16 +1276,15 @@ function renderPdfOrganizer(root){
       pdfDoc = await PDFDocument.load(bytes);
       const count = pdfDoc.getPageCount();
       pages = Array.from({length: count}, (_, i) => ({ pageIndex: i, rotation: 0, selected: false }));
-      controls.style.display = 'flex';
+      upload.style.display = 'none';
+      editor.style.display = 'flex';
       renderPages();
       toast(`Loaded ${count} page${count > 1 ? 's' : ''}`);
-      // load with pdf.js for thumbnails
       if(pdfjsAvailable){
         try{
-          const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(bytes) });
-          pdfjsDoc = await loadingTask.promise;
+          pdfjsDoc = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
           renderThumbnails();
-        }catch(e){ console.warn('[Klyro] pdf.js thumbnail render failed:', e); }
+        }catch(e){ console.warn('[Klyro] pdf.js thumbnails failed:', e); }
       }
     }catch(err){
       console.error(err);
@@ -1225,23 +1292,31 @@ function renderPdfOrganizer(root){
     }
   }
 
+  /* --- event wiring --- */
   dz.addEventListener('click', (e) => { if(e.target !== input) input.click(); });
   input.addEventListener('change', () => { if(input.files[0]) loadPdf(input.files[0]); input.value = ''; });
   ['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('drag'); }));
   ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('drag'); }));
   dz.addEventListener('drop', (e) => { e.preventDefault(); if(e.dataTransfer.files[0]) loadPdf(e.dataTransfer.files[0]); });
 
-  selectAllCb.addEventListener('change', () => { const checked = selectAllCb.checked; pages.forEach(p => p.selected = checked); renderPages(); });
+  $('#orgSelectAll', root).addEventListener('click', () => { pages.forEach(p => p.selected = true); renderPages(); });
+  $('#orgDeselectAll', root).addEventListener('click', () => { pages.forEach(p => p.selected = false); renderPages(); });
 
   $('#orgAddBlank', root).addEventListener('click', () => {
-    if(!pdfDoc) return;
     pages.push({ pageIndex: null, rotation: 0, selected: false });
-    renderPages();
-    toast('Blank page added');
+    renderPages(); toast('Blank page added');
+  });
+
+  deleteSelBtn.addEventListener('click', () => {
+    const remaining = pages.filter(p => !p.selected);
+    if(!remaining.length){ toast('Cannot delete all pages'); return; }
+    if(remaining.length === pages.length){ toast('No pages selected'); return; }
+    pages = remaining;
+    renderPages(); renderThumbnails();
+    toast('Selected pages deleted');
   });
 
   extractBtn.addEventListener('click', async () => {
-    if(!pdfDoc) return;
     const selected = pages.filter(p => p.selected);
     if(!selected.length){ toast('No pages selected'); return; }
     extractBtn.disabled = true; extractBtn.textContent = 'Extracting…';
@@ -1250,25 +1325,19 @@ function renderPdfOrganizer(root){
       const outBytes = await newPdf.save();
       downloadBlob(new Blob([outBytes], {type:'application/pdf'}), `${fileName}-extracted.pdf`);
       toast(`Extracted ${selected.length} page${selected.length > 1 ? 's' : ''}`);
-    }catch(err){
-      console.error(err);
-      toast('Extraction failed — try again');
-    }
-    extractBtn.disabled = false; extractBtn.textContent = 'Extract selected';
+    }catch(err){ console.error(err); toast('Extraction failed'); }
+    extractBtn.disabled = false; updateToolbar();
   });
 
   downloadBtn.addEventListener('click', async () => {
     if(!pdfDoc || !pages.length) return;
-    downloadBtn.disabled = true; downloadBtn.textContent = 'Building PDF…';
+    downloadBtn.disabled = true; downloadBtn.textContent = 'Building…';
     try{
       const newPdf = await buildPdf(pages);
       const outBytes = await newPdf.save();
       downloadBlob(new Blob([outBytes], {type:'application/pdf'}), `${fileName}-organized.pdf`);
       toast('PDF downloaded');
-    }catch(err){
-      console.error(err);
-      toast('Download failed — try again');
-    }
+    }catch(err){ console.error(err); toast('Download failed'); }
     downloadBtn.disabled = false; downloadBtn.textContent = 'Download PDF';
   });
 }

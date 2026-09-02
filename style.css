@@ -518,6 +518,105 @@ input[type="range"]::-webkit-slider-thumb:hover{
   font-size:0.6rem; color:var(--text-dimmer); text-align:center; line-height:1.2;
 }
 
+/* ---------- pdf organizer (redesign) ---------- */
+.pdf-org-editor{ display:flex; flex-direction:column; gap:0; }
+.pdf-org-toolbar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  background:rgba(255,255,255,0.04); border:1px solid var(--border-soft);
+  border-radius:var(--radius-md); padding:12px 16px;
+  margin-bottom:16px;
+}
+.pdf-org-toolbar-group{ display:flex; align-items:center; gap:6px; }
+.pdf-org-toolbar-sep{ width:1px; height:24px; background:var(--border-soft); margin:0 4px; }
+.pdf-org-page-count{ font-size:0.88rem; font-weight:600; color:var(--text-dim); white-space:nowrap; }
+.pdf-org-tool-btn{
+  padding:7px 14px; border-radius:8px; font-size:0.8rem; font-weight:500;
+  background:rgba(255,255,255,0.05); border:1px solid var(--border);
+  color:var(--text-dim); cursor:pointer; transition:all .2s var(--ease);
+  white-space:nowrap; font-family:inherit;
+}
+.pdf-org-tool-btn:hover:not(:disabled){ color:var(--text); border-color:var(--blue-2); background:rgba(79,124,255,0.08); }
+.pdf-org-tool-btn:disabled{ opacity:0.35; cursor:not-allowed; }
+.pdf-org-tool-btn.danger:hover:not(:disabled){ color:#ff6b6b; border-color:rgba(255,107,107,0.4); background:rgba(255,107,107,0.08); }
+.pdf-org-toolbar .btn{ padding:9px 18px; font-size:0.82rem; }
+
+.pdf-org-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));
+  gap:14px;
+}
+.pdf-org-page{
+  position:relative;
+  background:var(--panel-solid); border:1.5px solid var(--border);
+  border-radius:var(--radius-md); overflow:hidden;
+  cursor:pointer; transition:all .25s var(--ease);
+  display:flex; flex-direction:column;
+}
+.pdf-org-page:hover{
+  border-color:rgba(79,124,255,0.35);
+  transform:translateY(-3px);
+  box-shadow:0 8px 28px -8px rgba(79,124,255,0.25);
+}
+.pdf-org-page.selected{
+  border-color:var(--blue-2);
+  background:rgba(79,124,255,0.06);
+  box-shadow:0 0 0 2px rgba(79,124,255,0.2);
+}
+
+.pdf-org-page-check{
+  position:absolute; top:8px; left:8px; z-index:2;
+  width:22px; height:22px; border-radius:6px;
+  background:rgba(0,0,0,0.45); border:1.5px solid rgba(255,255,255,0.2);
+  display:flex; align-items:center; justify-content:center;
+  transition:all .2s;
+}
+.pdf-org-page-check input{ width:14px; height:14px; accent-color:#fff; cursor:pointer; }
+.pdf-org-page.selected .pdf-org-page-check{ background:var(--blue); border-color:var(--blue); }
+
+.pdf-org-page-thumb{
+  aspect-ratio:0.707; background:#fff;
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden; position:relative;
+}
+.pdf-org-page-thumb canvas{ width:100%; height:100%; object-fit:contain; }
+.pdf-org-page-blank{
+  width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+  background:repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 8px, #e8e8e8 8px, #e8e8e8 16px);
+  color:#999; font-size:0.72rem; font-style:italic;
+}
+.pdf-org-page-rot{
+  position:absolute; top:6px; right:6px;
+  background:rgba(0,0,0,0.65); color:#fff;
+  font-size:0.62rem; font-weight:600; padding:2px 7px;
+  border-radius:4px; display:none; letter-spacing:0.02em;
+}
+.pdf-org-page.has-rotation .pdf-org-page-rot{ display:block; }
+
+.pdf-org-page-footer{
+  padding:7px 8px; display:flex; align-items:center; justify-content:space-between;
+  border-top:1px solid var(--border-soft);
+  background:rgba(0,0,0,0.15);
+}
+.pdf-org-page-num{ font-size:0.72rem; font-weight:600; color:var(--text-dim); }
+.pdf-org-page-btns{ display:flex; gap:1px; }
+.pdf-org-page-btns button{
+  width:26px; height:26px; border-radius:6px;
+  display:flex; align-items:center; justify-content:center;
+  background:none; border:none; color:var(--text-dimmer);
+  font-size:12px; cursor:pointer; transition:all .15s;
+}
+.pdf-org-page-btns button:hover{ background:rgba(255,255,255,0.1); color:var(--text); }
+.pdf-org-page-btns button.del:hover{ color:#ff6b6b; background:rgba(255,107,107,0.12); }
+
+@media (max-width:640px){
+  .pdf-org-toolbar{ padding:10px 12px; gap:6px; }
+  .pdf-org-toolbar-group{ gap:4px; }
+  .pdf-org-tool-btn{ padding:6px 10px; font-size:0.72rem; }
+  .pdf-org-grid{ grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:10px; }
+  .pdf-org-page-btns button{ width:28px; height:28px; font-size:13px; }
+  .pdf-org-toolbar .btn{ padding:10px 14px; font-size:0.85rem; }
+}
+
 /* ---------- klyro drop ---------- */
 .drop-section{
   max-width:1100px; margin:0 auto; padding:0 20px;
