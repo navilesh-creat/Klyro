@@ -4,8 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Klyro — Free Online Tools: Image Compressor, PDF Merger, QR Code Generator & More</title>
-<meta name="description" content="100% free online tools — compress images, merge PDFs, generate QR codes, count words, convert case, and more. No login, no ads, no file uploads. Everything runs in your browser." />
-<meta name="keywords" content="free online tools, image compressor, PDF merger, QR code generator, password generator, word counter, case converter, JSON to CSV, text diff, unit converter, browser tools, no login tools, privacy tools" />
+<meta name="description" content="100% free online tools — compress images, merge PDFs, generate QR codes, count words, convert case, organize PDF pages, clean image metadata, and more. No login, no ads, no file uploads. Everything runs in your browser." />
+<meta name="keywords" content="free online tools, image compressor, PDF merger, QR code generator, password generator, word counter, case converter, JSON to CSV, text diff, unit converter, PDF page organizer, image metadata cleaner, browser tools, no login tools, privacy tools" />
 <meta name="robots" content="index, follow" />
 <meta name="author" content="Klyro" />
 <link rel="canonical" href="https://navilesh-creat.github.io/Klyro/" />
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://navilesh-creat.github.io/Klyro/" />
 <meta property="og:title" content="Klyro — Free Online Tools That Run In Your Browser" />
-<meta property="og:description" content="Compress images, merge PDFs, generate QR codes, and more — 100% free, no login, no ads. Your files never leave your device." />
+<meta property="og:description" content="Compress images, merge PDFs, generate QR codes, organize PDF pages, clean image metadata, and more — 100% free, no login, no ads. Your files never leave your device." />
 <meta property="og:image" content="https://navilesh-creat.github.io/Klyro/og-image.png" />
 <meta property="og:site_name" content="Klyro" />
 <meta property="og:locale" content="en_US" />
@@ -24,7 +24,7 @@
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:url" content="https://navilesh-creat.github.io/Klyro/" />
 <meta name="twitter:title" content="Klyro — Free Online Tools That Run In Your Browser" />
-<meta name="twitter:description" content="Compress images, merge PDFs, generate QR codes, and more — 100% free, no login, no ads. Your files never leave your device." />
+<meta name="twitter:description" content="Compress images, merge PDFs, generate QR codes, organize PDF pages, clean image metadata, and more — 100% free, no login, no ads. Your files never leave your device." />
 <meta name="twitter:image" content="https://navilesh-creat.github.io/Klyro/og-image.png" />
 
 <!-- Favicon -->
@@ -41,7 +41,7 @@
   "@type": "WebApplication",
   "name": "Klyro",
   "url": "https://navilesh-creat.github.io/Klyro/",
-  "description": "Free online tools that run in your browser — compress images, merge PDFs, generate QR codes, and more. No login, no ads, no file uploads.",
+  "description": "Free online tools that run in your browser — compress images, merge PDFs, generate QR codes, organize PDF pages, clean image metadata, and more. No login, no ads, no file uploads.",
   "applicationCategory": "UtilitiesApplication",
   "operatingSystem": "Any (browser-based)",
   "offers": {
@@ -59,7 +59,10 @@
     "Case converter",
     "JSON to CSV converter",
     "Text diff checker",
-    "Unit converter"
+    "Unit converter",
+    "PDF page organizer",
+    "Image metadata cleaner",
+    "ZIP creator and extractor"
   ],
   "browserRequirements": "Requires a modern web browser",
   "softwareHelp": {
@@ -114,7 +117,7 @@
       "name": "What tools does Klyro offer?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Klyro offers 10 free tools: image compressor, QR code generator, word counter, password generator, PDF merger, images to PDF, case converter, JSON to CSV converter, text diff checker, and unit converter."
+        "text": "Klyro offers 13 free tools: image compressor, QR code generator, word counter, password generator, PDF merger, images to PDF, case converter, JSON to CSV converter, text diff checker, unit converter, PDF page organizer, image metadata cleaner, and ZIP creator/extractor."
       }
     }
   ]
@@ -163,8 +166,35 @@
     <div class="scroll-cue" aria-hidden="true"><span></span></div>
   </section>
 
+  <section class="drop-section" aria-label="Smart drop zone">
+    <div class="drop-trigger" id="dropTrigger">
+      <div class="drop-trigger-icon">
+        <svg viewBox="0 0 24 24" fill="none" width="28" height="28"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="drop-trigger-text">
+        <h2>Klyro Drop</h2>
+        <p>Don't know what you need? Just drop a file and see what's possible.</p>
+      </div>
+      <span class="drop-trigger-arrow" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </div>
+    <div class="drop-expanded" id="dropExpanded">
+      <div class="dropzone dropzone-lg" id="klyroDrop">
+        <svg viewBox="0 0 24 24" fill="none" width="36" height="36" style="color:var(--text-dimmer);"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <strong>Drop a file here</strong><br>
+        <span style="color:var(--text-dimmer); font-size:0.85rem;">PDF, image, JSON, text, ZIP — or anything else</span>
+      </div>
+      <div id="dropActions" style="display:none;"></div>
+    </div>
+  </section>
+
   <section id="popular" class="tools-section">
     <div class="section-head">
+      <div class="search-wrap" id="searchWrap">
+        <svg viewBox="0 0 24 24" fill="none" width="18" height="18" style="color:var(--text-dimmer); flex-shrink:0;"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input type="text" id="toolSearch" placeholder="Search tools…" autocomplete="off" />
+      </div>
       <h2>Most used</h2>
       <p>Quick tools for everyday tasks — pick one and go.</p>
     </div>
@@ -226,8 +256,10 @@
 
 <div class="toast" id="toast" aria-live="polite"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

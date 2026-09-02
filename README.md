@@ -21,6 +21,9 @@ so your data never leaves your device.
 - Case converter (UPPER, lower, Title, camelCase, snake_case…)
 - JSON ⇄ CSV converter
 - Text diff checker
+- Unit converter (length, weight, temperature, speed…)
+- PDF page organizer (reorder, delete, rotate, duplicate, extract)
+- Image metadata cleaner (strip GPS, device info, timestamps)
 
 ## Why it's free
 

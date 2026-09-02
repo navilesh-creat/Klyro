@@ -108,6 +108,9 @@ const ICONS = {
   json: `<svg viewBox="0 0 24 24" fill="none"><path d="M8 4c-2 0-3 1-3 3v3c0 1-1 2-2 2 1 0 2 1 2 2v3c0 2 1 3 3 3M16 4c2 0 3 1 3 3v3c0 1 1 2 2 2-1 0-2 1-2 2v3c0 2-1 3-3 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   diff: `<svg viewBox="0 0 24 24" fill="none"><path d="M8 3v14M8 17l-3-3M8 17l3-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 21V7M16 7l-3 3M16 7l3 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   unit: `<svg viewBox="0 0 24 24" fill="none"><path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M7 4v6M12 4v16M17 14v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
+  pdfOrganize: `<svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M14 3v4h4" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 18h3M13 18h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
+  metadata: `<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.7"/><path d="M12 9v6M9 12l3-3 3 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 18h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
+  zip: `<svg viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 18v-6M9 15l3 3 3-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 };
 
 /* ---------------- tool registry ---------------- */
@@ -152,6 +155,18 @@ const TOOLS = [
   {
     id:'unit-converter', title:'Unit converter', desc:'Length, weight, temperature, speed & more.',
     icon:'unit', color:{bg:'rgba(52,230,224,0.16)', fg:'#34e6e0'}, category:'advanced', render: renderUnitConverter
+  },
+  {
+    id:'pdf-organize', title:'PDF page organizer', desc:'Reorder, delete, rotate, duplicate & extract pages.',
+    icon:'pdfOrganize', color:{bg:'rgba(79,124,255,0.16)', fg:'#7aa2ff'}, category:'advanced', render: renderPdfOrganizer
+  },
+  {
+    id:'metadata-clean', title:'Image metadata cleaner', desc:'Strip hidden metadata — GPS, device info, timestamps.',
+    icon:'metadata', color:{bg:'rgba(155,92,255,0.16)', fg:'#c58bff'}, category:'advanced', render: renderImageMetadataCleaner
+  },
+  {
+    id:'zip-tool', title:'ZIP creator & extractor', desc:'Create ZIP archives or extract files from one.',
+    icon:'zip', color:{bg:'rgba(255,180,90,0.16)', fg:'#ffb45a'}, category:'advanced', render: renderZipTool
   },
 ];
 
@@ -1054,3 +1069,634 @@ function renderUnitConverter(root){
   populateUnits();
   convert();
 }
+
+/* =========================================================
+   TOOL: PDF page organizer
+   ========================================================= */
+function renderPdfOrganizer(root){
+  if(typeof PDFLib === 'undefined'){
+    root.appendChild(el(`<div class="result-box" style="background:rgba(255,107,107,0.08); border-color:rgba(255,107,107,0.25);"><span>The PDF library couldn't load from the CDN — check your internet connection, disable any ad blocker for this site, and reopen this tool.</span></div>`));
+    return;
+  }
+
+  // initialise pdf.js worker for thumbnail rendering
+  const pdfjsAvailable = typeof pdfjsLib !== 'undefined';
+  if(pdfjsAvailable && !pdfjsLib._workerSet){
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfjsLib._workerSet = true;
+  }
+
+  root.appendChild(el(`
+    <label class="dropzone" id="dzPdfOrg">
+      <strong>Tap to choose a PDF</strong><br>or drop it here
+      <input type="file" id="pdfOrgInput" accept="application/pdf" />
+    </label>
+    <div id="orgControls" style="display:none; flex-direction:column; gap:14px;">
+      <div class="check-row" style="margin-bottom:4px;">
+        <input type="checkbox" id="orgSelectAll" /><label for="orgSelectAll">Select all pages</label>
+      </div>
+      <div class="file-list" id="orgPageList"></div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="orgAddBlank">+ Blank page</button>
+        <button class="btn btn-secondary" id="orgExtract" disabled>Extract selected</button>
+      </div>
+      <button class="btn btn-block" id="orgDownload" disabled>Download PDF</button>
+    </div>
+  `));
+
+  const dz = $('#dzPdfOrg', root), input = $('#pdfOrgInput', root);
+  const controls = $('#orgControls', root);
+  const list = $('#orgPageList', root);
+  const downloadBtn = $('#orgDownload', root);
+  const extractBtn = $('#orgExtract', root);
+  const selectAllCb = $('#orgSelectAll', root);
+  let pdfDoc = null, pdfjsDoc = null, pages = [], fileName = 'klyro-document';
+
+  // pages[] items: { pageIndex (number|null for blank), rotation: 0|90|180|270, selected: false }
+
+  /* --- thumbnail rendering via pdf.js --- */
+  async function renderThumbnails(){
+    if(!pdfjsAvailable || !pdfjsDoc) return;
+    const THUMB_W = 40, THUMB_H = 56;
+    for(let i = 0; i < pages.length; i++){
+      const pg = pages[i];
+      const wrap = list.querySelector(`[data-page="${i}"] .pdf-thumb-wrap`);
+      if(!wrap || pg.pageIndex === null) continue; // skip blank pages
+      try{
+        const page = await pdfjsDoc.getPage(pg.pageIndex + 1); // pdf.js is 1-indexed
+        const vp = page.getViewport({ scale: 1 });
+        const scale = Math.min(THUMB_W / vp.width, THUMB_H / vp.height);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(viewport.width * (window.devicePixelRatio || 1));
+        canvas.height = Math.round(viewport.height * (window.devicePixelRatio || 1));
+        canvas.style.width = Math.round(viewport.width) + 'px';
+        canvas.style.height = Math.round(viewport.height) + 'px';
+        const ctx = canvas.getContext('2d');
+        ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        wrap.innerHTML = '';
+        wrap.appendChild(canvas);
+      }catch(e){
+        // rendering failed — leave the placeholder
+      }
+    }
+  }
+
+  function renderPages(){
+    list.innerHTML = '';
+    pages.forEach((pg, i) => {
+      const rotationLabel = pg.rotation ? ` ${pg.rotation}°` : '';
+      const thumbContent = pg.pageIndex === null
+        ? '<div class="pdf-thumb-blank">blank</div>'
+        : '';
+      const rotationStyle = pg.rotation ? ` style="transform:rotate(${pg.rotation}deg);"` : '';
+      const row = el(`
+        <div class="file-row" data-page="${i}" style="gap:8px;">
+          <input type="checkbox" data-role="sel" ${pg.selected ? 'checked' : ''} style="width:auto; accent-color:var(--blue-2);" />
+          <div class="order-btns">
+            <button data-act="up" title="Move up">▲</button>
+            <button data-act="down" title="Move down">▼</button>
+          </div>
+          <div class="pdf-thumb-wrap"${rotationStyle}>${thumbContent}</div>
+          <span class="fname">Page ${i + 1}${pg.pageIndex === null ? ' (blank)' : ''}${rotationLabel}</span>
+          <span class="fsize" style="display:flex; gap:4px;">
+            <button data-act="rotate" title="Rotate 90°" style="background:none;border:none;color:var(--text-dimmer);cursor:pointer;font-size:13px;" >↻</button>
+            <button data-act="dup" title="Duplicate" style="background:none;border:none;color:var(--text-dimmer);cursor:pointer;font-size:13px;">⧉</button>
+            <button data-act="remove" title="Remove" style="background:none;border:none;color:var(--text-dimmer);cursor:pointer;font-size:13px;">✕</button>
+          </span>
+        </div>
+      `);
+      row.querySelector('[data-role="sel"]').addEventListener('change', (e) => { pages[i].selected = e.target.checked; updateExtractBtn(); });
+      row.querySelector('[data-act="up"]').addEventListener('click', () => { if(i > 0){ [pages[i-1], pages[i]] = [pages[i], pages[i-1]]; renderPages(); renderThumbnails(); } });
+      row.querySelector('[data-act="down"]').addEventListener('click', () => { if(i < pages.length-1){ [pages[i+1], pages[i]] = [pages[i], pages[i+1]]; renderPages(); renderThumbnails(); } });
+      row.querySelector('[data-act="rotate"]').addEventListener('click', () => { pages[i].rotation = (pages[i].rotation + 90) % 360; renderPages(); renderThumbnails(); });
+      row.querySelector('[data-act="dup"]').addEventListener('click', () => { pages.splice(i + 1, 0, { ...pg, selected: false }); renderPages(); renderThumbnails(); });
+      row.querySelector('[data-act="remove"]').addEventListener('click', () => { if(pages.length <= 1){ toast('PDF must have at least one page'); return; } pages.splice(i, 1); renderPages(); renderThumbnails(); });
+      list.appendChild(row);
+    });
+    downloadBtn.disabled = pages.length === 0;
+    updateExtractBtn();
+  }
+
+  function updateExtractBtn(){
+    extractBtn.disabled = !pages.some(p => p.selected);
+  }
+
+  async function buildPdf(pageList){
+    const { PDFDocument } = PDFLib;
+    const newPdf = await PDFDocument.create();
+    for(const pg of pageList){
+      if(pg.pageIndex === null){
+        const page = newPdf.addPage([595.28, 841.89]); // A4
+        if(pg.rotation) page.setRotation(PDFLib.degrees(pg.rotation));
+      } else {
+        const [copiedPage] = await newPdf.copyPages(pdfDoc, [pg.pageIndex]);
+        if(pg.rotation) copiedPage.setRotation(PDFLib.degrees(pg.rotation));
+        newPdf.addPage(copiedPage);
+      }
+    }
+    return newPdf;
+  }
+
+  async function loadPdf(file){
+    if(!file || file.type !== 'application/pdf'){ toast('Please choose a PDF file'); return; }
+    fileName = file.name.replace(/\.pdf$/i, '') || 'document';
+    try{
+      const bytes = await file.arrayBuffer();
+      const { PDFDocument } = PDFLib;
+      pdfDoc = await PDFDocument.load(bytes);
+      const count = pdfDoc.getPageCount();
+      pages = Array.from({length: count}, (_, i) => ({ pageIndex: i, rotation: 0, selected: false }));
+      controls.style.display = 'flex';
+      renderPages();
+      toast(`Loaded ${count} page${count > 1 ? 's' : ''}`);
+      // load with pdf.js for thumbnails
+      if(pdfjsAvailable){
+        try{
+          const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(bytes) });
+          pdfjsDoc = await loadingTask.promise;
+          renderThumbnails();
+        }catch(e){ console.warn('[Klyro] pdf.js thumbnail render failed:', e); }
+      }
+    }catch(err){
+      console.error(err);
+      toast('Could not read that PDF — is it valid?');
+    }
+  }
+
+  dz.addEventListener('click', (e) => { if(e.target !== input) input.click(); });
+  input.addEventListener('change', () => { if(input.files[0]) loadPdf(input.files[0]); input.value = ''; });
+  ['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('drag'); }));
+  dz.addEventListener('drop', (e) => { e.preventDefault(); if(e.dataTransfer.files[0]) loadPdf(e.dataTransfer.files[0]); });
+
+  selectAllCb.addEventListener('change', () => { const checked = selectAllCb.checked; pages.forEach(p => p.selected = checked); renderPages(); });
+
+  $('#orgAddBlank', root).addEventListener('click', () => {
+    if(!pdfDoc) return;
+    pages.push({ pageIndex: null, rotation: 0, selected: false });
+    renderPages();
+    toast('Blank page added');
+  });
+
+  extractBtn.addEventListener('click', async () => {
+    if(!pdfDoc) return;
+    const selected = pages.filter(p => p.selected);
+    if(!selected.length){ toast('No pages selected'); return; }
+    extractBtn.disabled = true; extractBtn.textContent = 'Extracting…';
+    try{
+      const newPdf = await buildPdf(selected);
+      const outBytes = await newPdf.save();
+      downloadBlob(new Blob([outBytes], {type:'application/pdf'}), `${fileName}-extracted.pdf`);
+      toast(`Extracted ${selected.length} page${selected.length > 1 ? 's' : ''}`);
+    }catch(err){
+      console.error(err);
+      toast('Extraction failed — try again');
+    }
+    extractBtn.disabled = false; extractBtn.textContent = 'Extract selected';
+  });
+
+  downloadBtn.addEventListener('click', async () => {
+    if(!pdfDoc || !pages.length) return;
+    downloadBtn.disabled = true; downloadBtn.textContent = 'Building PDF…';
+    try{
+      const newPdf = await buildPdf(pages);
+      const outBytes = await newPdf.save();
+      downloadBlob(new Blob([outBytes], {type:'application/pdf'}), `${fileName}-organized.pdf`);
+      toast('PDF downloaded');
+    }catch(err){
+      console.error(err);
+      toast('Download failed — try again');
+    }
+    downloadBtn.disabled = false; downloadBtn.textContent = 'Download PDF';
+  });
+}
+
+/* =========================================================
+   TOOL: Image metadata cleaner
+   ========================================================= */
+function renderImageMetadataCleaner(root){
+  root.appendChild(el(`
+    <label class="dropzone" id="dzMeta">
+      <strong>Tap to choose an image</strong><br>or drop it here — strips all hidden metadata
+      <input type="file" id="metaInput" accept="image/*" />
+    </label>
+    <div id="metaControls" style="display:none; flex-direction:column; gap:14px;">
+      <div class="stat-grid">
+        <div class="stat-box"><div class="num" id="metaOrigSize">–</div><div class="lab">original</div></div>
+        <div class="stat-box"><div class="num" id="metaCleanSize">–</div><div class="lab">cleaned</div></div>
+        <div class="stat-box"><div class="num" id="metaSaved">–</div><div class="lab">saved</div></div>
+      </div>
+      <div id="metaInfo" style="background:rgba(155,92,255,0.06); border:1px solid rgba(155,92,255,0.2); border-radius:var(--radius-md); padding:14px 16px; font-size:0.85rem; color:var(--text-dim); line-height:1.6;"></div>
+      <button class="btn btn-block" id="metaCleanBtn">Clean & Download</button>
+      <p class="hint">Re-draws the image on a canvas, which strips all EXIF, GPS, and device metadata. Output is always lossless for PNG; slight quality loss possible for JPG.</p>
+    </div>
+  `));
+
+  const dz = $('#dzMeta', root), input = $('#metaInput', root);
+  const controls = $('#metaControls', root);
+  const origSizeEl = $('#metaOrigSize', root);
+  const cleanSizeEl = $('#metaCleanSize', root);
+  const savedEl = $('#metaSaved', root);
+  const infoEl = $('#metaInfo', root);
+  const cleanBtn = $('#metaCleanBtn', root);
+  let sourceFile = null, sourceImage = null;
+
+  function formatMetaInfo(file){
+    const lines = [];
+    lines.push(`<strong style="color:var(--text);">${file.name}</strong>`);
+    lines.push(`Format: ${file.type || 'unknown'}`);
+    lines.push(`Original size: ${fmtBytes(file.size)}`);
+    lines.push('');
+    lines.push(`<strong style="color:var(--text);">Metadata stripped:</strong>`);
+    lines.push('✓ GPS location data');
+    lines.push('✓ Camera make & model');
+    lines.push('✓ Date & time taken');
+    lines.push('✓ Software / firmware version');
+    lines.push('✓ Lens information');
+    lines.push('✓ Thumbnail data');
+    lines.push('✓ All other EXIF / IPTC / XMP tags');
+    infoEl.innerHTML = lines.join('<br>');
+  }
+
+  function loadImage(file){
+    if(!file || !file.type.startsWith('image/')){ toast('Please choose an image file'); return; }
+    sourceFile = file;
+    origSizeEl.textContent = fmtBytes(file.size);
+    cleanSizeEl.textContent = '–';
+    savedEl.textContent = '–';
+    formatMetaInfo(file);
+    const img = new Image();
+    img.onload = () => { sourceImage = img; controls.style.display = 'flex'; };
+    img.src = URL.createObjectURL(file);
+  }
+
+  cleanBtn.addEventListener('click', () => {
+    if(!sourceImage || !sourceFile) return;
+    cleanBtn.disabled = true; cleanBtn.textContent = 'Cleaning…';
+    try{
+      const canvas = document.createElement('canvas');
+      canvas.width = sourceImage.naturalWidth;
+      canvas.height = sourceImage.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      // For JPEG, fill white background to handle transparency
+      if(sourceFile.type === 'image/jpeg'){
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.drawImage(sourceImage, 0, 0);
+      canvas.toBlob((blob) => {
+        if(!blob){ cleanBtn.disabled = false; cleanBtn.textContent = 'Clean & Download'; return; }
+        cleanSizeEl.textContent = fmtBytes(blob.size);
+        const diff = sourceFile.size - blob.size;
+        const pct = sourceFile.size > 0 ? Math.round((diff / sourceFile.size) * 100) : 0;
+        savedEl.textContent = pct >= 0 ? `${pct}%` : '0%';
+        const ext = sourceFile.type === 'image/png' ? 'png' : 'jpg';
+        const name = sourceFile.name.replace(/\.[^.]+$/, '') + '-clean.' + ext;
+        downloadBlob(blob, name);
+        toast('Metadata removed — file downloaded');
+        cleanBtn.disabled = false; cleanBtn.textContent = 'Clean & Download';
+      }, sourceFile.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.95);
+    }catch(err){
+      console.error(err);
+      toast('Something went wrong cleaning that image');
+      cleanBtn.disabled = false; cleanBtn.textContent = 'Clean & Download';
+    }
+  });
+
+  dz.addEventListener('click', (e) => { if(e.target !== input) input.click(); });
+  input.addEventListener('change', () => { if(input.files[0]) loadImage(input.files[0]); input.value = ''; });
+  ['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('drag'); }));
+  dz.addEventListener('drop', (e) => { e.preventDefault(); if(e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]); });
+}
+
+/* =========================================================
+   TOOL: ZIP creator & extractor
+   ========================================================= */
+function renderZipTool(root){
+  if(typeof JSZip === 'undefined'){
+    root.appendChild(el(`<div class="result-box" style="background:rgba(255,107,107,0.08); border-color:rgba(255,107,107,0.25);"><span>The ZIP library couldn't load from the CDN — check your internet connection, disable any ad blocker, and reopen this tool.</span></div>`));
+    return;
+  }
+  root.appendChild(el(`
+    <div>
+      <span class="field-label">Mode</span>
+      <select id="zipMode">
+        <option value="create">Create ZIP from files</option>
+        <option value="extract">Extract files from ZIP</option>
+      </select>
+    </div>
+    <label class="dropzone" id="dzZip">
+      <strong id="zipDropLabel">Tap to choose files</strong><br>
+      <span id="zipDropHint" style="color:var(--text-dimmer); font-size:0.85rem;">or drop them here</span>
+      <input type="file" id="zipInput" multiple />
+    </label>
+    <div class="file-list" id="zipList"></div>
+    <button class="btn btn-block" id="zipBtn" disabled>Create ZIP</button>
+    <p class="hint" id="zipHint">Add files to build an archive.</p>
+  `));
+
+  const dz = $('#dzZip', root), input = $('#zipInput', root);
+  const modeSel = $('#zipMode', root);
+  const list = $('#zipList', root);
+  const btn = $('#zipBtn', root);
+  const hint = $('#zipHint', root);
+  const dropLabel = $('#zipDropLabel', root);
+  const dropHint = $('#zipDropHint', root);
+  let files = [];
+  let extractedFiles = [];
+
+  function updateMode(){
+    const extracting = modeSel.value === 'extract';
+    files = [];
+    extractedFiles = [];
+    btn.textContent = extracting ? 'Extract ZIP' : 'Create ZIP';
+    hint.textContent = extracting ? 'Drop a .zip file to extract its contents.' : 'Add files to build an archive.';
+    dropLabel.textContent = extracting ? 'Tap to choose a ZIP file' : 'Tap to choose files';
+    dropHint.textContent = extracting ? 'or drop a .zip here' : 'or drop them here';
+    input.accept = extracting ? '.zip,application/zip' : '*';
+    input.multiple = !extracting;
+    renderList();
+  }
+
+  function renderList(){
+    list.innerHTML = '';
+    if(modeSel.value === 'create'){
+      files.forEach((f, i) => {
+        const row = el(`
+          <div class="file-row">
+            <span class="fname">${f.name}</span>
+            <span class="fsize">${fmtBytes(f.size)}</span>
+            <button data-act="remove" title="Remove">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        `);
+        row.querySelector('[data-act="remove"]').addEventListener('click', () => { files.splice(i,1); renderList(); });
+        list.appendChild(row);
+      });
+      btn.disabled = files.length === 0;
+    } else {
+      extractedFiles.forEach((f, i) => {
+        const row = el(`
+          <div class="file-row">
+            <span class="fname">${f.name}</span>
+            <span class="fsize">${fmtBytes(f.size)}</span>
+            <button data-act="dl" title="Download">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        `);
+        row.querySelector('[data-act="dl"]').addEventListener('click', () => {
+          downloadBlob(new Blob([f.data]), f.name);
+        });
+        list.appendChild(row);
+      });
+      btn.disabled = extractedFiles.length === 0;
+      btn.textContent = extractedFiles.length > 1 ? `Download all (${extractedFiles.length})` : 'Download';
+    }
+  }
+
+  function addFiles(fileList){
+    for(const f of fileList) files.push(f);
+    renderList();
+  }
+
+  modeSel.addEventListener('change', updateMode);
+
+  dz.addEventListener('click', (e) => { if(e.target !== input) input.click(); });
+  input.addEventListener('change', () => {
+    if(input.files.length) handleDrop(input.files);
+    input.value = '';
+  });
+  ['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('drag'); }));
+  dz.addEventListener('drop', (e) => { e.preventDefault(); if(e.dataTransfer.files.length) handleDrop(e.dataTransfer.files); });
+
+  async function handleDrop(fileList){
+    if(modeSel.value === 'extract'){
+      const file = fileList[0];
+      if(!file) return;
+      if(!file.name.toLowerCase().endsWith('.zip') && file.type !== 'application/zip'){
+        toast('Please drop a .zip file'); return;
+      }
+      try{
+        btn.disabled = true; btn.textContent = 'Extracting…';
+        const bytes = await file.arrayBuffer();
+        const zip = await JSZip.loadAsync(bytes);
+        extractedFiles = [];
+        const entries = [];
+        zip.forEach((path, entry) => { if(!entry.dir) entries.push({path, entry}); });
+        for(const {path, entry} of entries){
+          const data = await entry.async('uint8array');
+          extractedFiles.push({ name: path, size: data.length, data });
+        }
+        renderList();
+        toast(`Extracted ${extractedFiles.length} file${extractedFiles.length !== 1 ? 's' : ''}`);
+      }catch(err){
+        console.error(err);
+        toast('Could not read that ZIP — is it valid?');
+        btn.disabled = false; btn.textContent = 'Extract ZIP';
+      }
+    } else {
+      addFiles(fileList);
+    }
+  }
+
+  btn.addEventListener('click', async () => {
+    if(modeSel.value === 'create'){
+      if(!files.length) return;
+      btn.disabled = true; btn.textContent = 'Creating…';
+      try{
+        const zip = new JSZip();
+        for(const f of files){
+          zip.file(f.name, f);
+        }
+        const blob = await zip.generateAsync({type:'blob', compression:'DEFLATE', compressionOptions:{level:6}});
+        downloadBlob(blob, 'archive.zip');
+        toast('ZIP created');
+      }catch(err){
+        console.error(err);
+        toast('Failed to create ZIP');
+      }
+      btn.disabled = false; btn.textContent = 'Create ZIP';
+    } else {
+      if(!extractedFiles.length) return;
+      if(extractedFiles.length === 1){
+        downloadBlob(new Blob([extractedFiles[0].data]), extractedFiles[0].name);
+      } else {
+        const zip = new JSZip();
+        for(const f of extractedFiles) zip.file(f.name, f.data);
+        const blob = await zip.generateAsync({type:'blob'});
+        downloadBlob(blob, 'repacked.zip');
+      }
+      toast('Downloaded');
+    }
+  });
+}
+
+/* =========================================================
+   TOOL: Image compressor — PDF output support
+   ========================================================= */
+(function patchImageToolPdf(){
+  const origRender = renderImageTool;
+  renderImageTool = function(root){
+    origRender(root);
+    const formatSel = $('#imgFormat', root);
+    if(!formatSel) return;
+    // Add PDF option
+    const pdfOpt = document.createElement('option');
+    pdfOpt.value = 'application/pdf';
+    pdfOpt.textContent = 'PDF (embed image)';
+    formatSel.appendChild(pdfOpt);
+    // Hide quality for PDF
+    formatSel.addEventListener('change', () => {
+      const qw = $('#qualityWrap', root);
+      if(qw) qw.style.display = (formatSel.value === 'image/png' || formatSel.value === 'application/pdf') ? 'none' : 'block';
+    });
+    // Patch download for PDF
+    const dlBtn = $('#downloadImgBtn', root);
+    if(!dlBtn) return;
+    dlBtn.addEventListener('click', async (e) => {
+      if(formatSel.value !== 'application/pdf') return;
+      e.stopImmediatePropagation();
+      const preview = $('#imgPreview', root);
+      if(!preview || !preview.src) return;
+      dlBtn.disabled = true; dlBtn.textContent = 'Building PDF…';
+      try{
+        const { PDFDocument } = PDFLib;
+        const pdf = await PDFDocument.create();
+        const resp = await fetch(preview.src);
+        const buf = await resp.arrayBuffer();
+        let img;
+        try{ img = await pdf.embedJpg(buf); }catch{ img = await pdf.embedPng(buf); }
+        const page = pdf.addPage([img.width, img.height]);
+        page.drawImage(img, {x:0, y:0, width:img.width, height:img.height});
+        const out = await pdf.save();
+        const name = (preview.getAttribute('alt') || 'image') + '.pdf';
+        downloadBlob(new Blob([out], {type:'application/pdf'}), name);
+        toast('PDF created');
+      }catch(err){ console.error(err); toast('Could not create PDF'); }
+      dlBtn.disabled = false; dlBtn.textContent = 'Download';
+    }, true);
+  };
+})();
+
+/* =========================================================
+   Klyro Drop — smart file detection
+   ========================================================= */
+(function initKlyroDrop(){
+  const trigger = $('#dropTrigger');
+  const expanded = $('#dropExpanded');
+  const dropZone = $('#klyroDrop');
+  const actionsEl = $('#dropActions');
+  if(!trigger || !expanded || !dropZone || !actionsEl) return;
+
+  const DROP_MAP = {
+    pdf: [
+      { label: 'Merge', toolId: 'pdf-merge' },
+      { label: 'Organize', toolId: 'pdf-organize' },
+      { label: 'Images to PDF', toolId: 'img-to-pdf' },
+    ],
+    image: [
+      { label: 'Compress', toolId: 'image-tool' },
+      { label: 'Remove Metadata', toolId: 'metadata-clean' },
+      { label: 'To PDF', toolId: 'img-to-pdf' },
+    ],
+    json: [
+      { label: 'JSON ⇄ CSV', toolId: 'json-csv' },
+    ],
+    text: [
+      { label: 'Word Counter', toolId: 'word-counter' },
+      { label: 'Diff Checker', toolId: 'diff' },
+      { label: 'Case Converter', toolId: 'case-converter' },
+    ],
+    zip: [
+      { label: 'Extract / Create', toolId: 'zip-tool' },
+    ],
+    csv: [
+      { label: 'CSV ⇄ JSON', toolId: 'json-csv' },
+    ],
+  };
+
+  function detectType(file){
+    const name = file.name.toLowerCase();
+    const type = file.type || '';
+    if(type === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
+    if(type.startsWith('image/')) return 'image';
+    if(type === 'application/zip' || name.endsWith('.zip')) return 'zip';
+    if(type === 'application/json' || name.endsWith('.json')) return 'json';
+    if(type === 'text/csv' || name.endsWith('.csv')) return 'csv';
+    if(type.startsWith('text/') || name.endsWith('.txt') || name.endsWith('.md') || name.endsWith('.log')) return 'text';
+    return null;
+  }
+
+  function showActions(file){
+    const kind = detectType(file);
+    if(!kind){
+      actionsEl.innerHTML = `<div class="drop-file-info"><strong>${file.name}</strong> — no matching tools for this file type.</div>`;
+      actionsEl.style.display = 'block';
+      return;
+    }
+    const actions = DROP_MAP[kind];
+    let html = `<div class="drop-file-info"><strong>${file.name}</strong> — ${fmtBytes(file.size)}</div>`;
+    html += '<div class="drop-actions-grid">';
+    actions.forEach(a => {
+      html += `<button class="drop-action-btn" data-tool="${a.toolId}"><svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>${a.label}</button>`;
+    });
+    html += '</div>';
+    actionsEl.innerHTML = html;
+    actionsEl.style.display = 'block';
+    $$('.drop-action-btn', actionsEl).forEach(btn => {
+      btn.addEventListener('click', () => openTool(btn.dataset.tool));
+    });
+  }
+
+  trigger.addEventListener('click', () => {
+    trigger.classList.toggle('open');
+    expanded.classList.toggle('open', trigger.classList.contains('open'));
+  });
+
+  ['dragover','dragenter'].forEach(ev => dropZone.addEventListener(ev, (e) => { e.preventDefault(); dropZone.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, (e) => { e.preventDefault(); dropZone.classList.remove('drag'); }));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if(file) showActions(file);
+  });
+  dropZone.addEventListener('click', () => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.addEventListener('change', () => { if(inp.files[0]) showActions(inp.files[0]); });
+    inp.click();
+  });
+})();
+
+/* =========================================================
+   Fuzzy search bar
+   ========================================================= */
+(function initSearch(){
+  const input = $('#toolSearch');
+  if(!input) return;
+
+  function fuzzyMatch(query, text){
+    query = query.toLowerCase().trim();
+    text = text.toLowerCase();
+    if(!query) return true;
+    if(text.includes(query)) return true;
+    const words = query.split(/\s+/).filter(Boolean);
+    return words.every(w => text.includes(w));
+  }
+
+  input.addEventListener('input', () => {
+    const q = input.value;
+    $$('.tool-card').forEach(card => {
+      const title = (card.querySelector('h3')?.textContent || '').toLowerCase();
+      const desc = (card.querySelector('p')?.textContent || '').toLowerCase();
+      const match = fuzzyMatch(q, title + ' ' + desc);
+      card.classList.toggle('search-hidden', !match);
+    });
+  });
+})();
