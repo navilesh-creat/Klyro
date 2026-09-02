@@ -158,7 +158,9 @@ const TOOLS = [
   },
   {
     id:'pdf-organize', title:'PDF page organizer', desc:'Reorder, delete, rotate, duplicate & extract pages.',
-    icon:'pdfOrganize', color:{bg:'rgba(79,124,255,0.16)', fg:'#7aa2ff'}, category:'advanced', render: renderPdfOrganizer
+    icon:'pdfOrganize', color:{bg:'rgba(79,124,255,0.16)', fg:'#7aa2ff'}, category:'advanced', render: function(root){
+      root.appendChild(el(`<div style="text-align:center; padding:20px 0;"><p style="color:var(--text-dim); margin-bottom:16px;">The full PDF Organizer opens in a new page with a professional editing interface.</p><button class="btn" onclick="window.open('pdf-organizer.html','_blank')" style="cursor:pointer;">Open Full PDF Organizer →</button></div>`));
+    }
   },
   {
     id:'metadata-clean', title:'Image metadata cleaner', desc:'Strip hidden metadata — GPS, device info, timestamps.',
