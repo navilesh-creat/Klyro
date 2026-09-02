@@ -1,4 +1,13 @@
 User-agent: *
 Allow: /
+Disallow: /node_modules/
+Disallow: /.git/
 
 Sitemap: https://navilesh-creat.github.io/Klyro/sitemap.xml
+
+# Crawl-delay for polite bots
+User-agent: Bingbot
+Crawl-delay: 2
+
+User-agent: Yahoo! Slurp
+Crawl-delay: 2
