@@ -107,6 +107,7 @@ const ICONS = {
   caseConv: `<svg viewBox="0 0 24 24" fill="none"><path d="M4 16l4-10 4 10M5.5 12.5h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 9h3.5a2 2 0 1 1 0 4H14V9zM14 13h4a2 2 0 1 1 0 4h-4v-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
   json: `<svg viewBox="0 0 24 24" fill="none"><path d="M8 4c-2 0-3 1-3 3v3c0 1-1 2-2 2 1 0 2 1 2 2v3c0 2 1 3 3 3M16 4c2 0 3 1 3 3v3c0 1 1 2 2 2-1 0-2 1-2 2v3c0 2-1 3-3 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   diff: `<svg viewBox="0 0 24 24" fill="none"><path d="M8 3v14M8 17l-3-3M8 17l3-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 21V7M16 7l-3 3M16 7l3 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  unit: `<svg viewBox="0 0 24 24" fill="none"><path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M7 4v6M12 4v16M17 14v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
 };
 
 /* ---------------- tool registry ---------------- */
@@ -148,6 +149,10 @@ const TOOLS = [
     id:'diff', title:'Text diff checker', desc:'Compare two texts and see what changed.',
     icon:'diff', color:{bg:'rgba(79,124,255,0.16)', fg:'#7aa2ff'}, category:'advanced', render: renderDiffTool
   },
+  {
+    id:'unit-converter', title:'Unit converter', desc:'Length, weight, temperature, speed & more.',
+    icon:'unit', color:{bg:'rgba(52,230,224,0.16)', fg:'#34e6e0'}, category:'advanced', render: renderUnitConverter
+  },
 ];
 
 /* ---------------- render tool grid cards ---------------- */
@@ -166,26 +171,39 @@ function buildCard(tool){
 function mountGrids(){
   const popularGrid = $('#popular-grid');
   const advancedGrid = $('#advanced-grid');
-  const advWrap = el('<div class="grid-inner-wrap"></div>');
-  const advInner = el('<div class="tool-grid" style="margin:0;"></div>');
-  advWrap.appendChild(advInner);
-  advancedGrid.appendChild(advWrap);
 
   TOOLS.forEach(tool => {
     const card = buildCard(tool);
     if(tool.category === 'popular') popularGrid.appendChild(card);
-    else advInner.appendChild(card);
+    else advancedGrid.appendChild(card);
   });
 }
 mountGrids();
 
-/* advanced toggle */
-const advToggle = $('#advancedToggle');
-const advGrid = $('#advanced-grid');
-advToggle.addEventListener('click', () => {
-  const open = advGrid.classList.toggle('open');
-  advToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-});
+/* ---------------- scroll reveal ---------------- */
+(function initReveal(){
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduceMotion) return;
+
+  // add reveal class to tool cards and section heads
+  const targets = $$('.tool-card, .section-head, .about-inner');
+  targets.forEach(t => t.classList.add('reveal'));
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if(entry.isIntersecting){
+        // stagger siblings
+        const siblings = entry.target.parentElement?.querySelectorAll('.reveal') || [];
+        const idx = Array.from(siblings).indexOf(entry.target);
+        entry.target.style.transitionDelay = `${(idx % 6) * 60}ms`;
+        entry.target.classList.add('visible');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+  targets.forEach(t => io.observe(t));
+})();
 
 /* ---------------- modal system ---------------- */
 const overlay = $('#modalOverlay');
@@ -834,4 +852,205 @@ function renderDiffTool(root){
     });
     out.style.display = 'block';
   });
+}
+
+/* =========================================================
+   TOOL: Unit converter
+   ========================================================= */
+function renderUnitConverter(root){
+  const CATEGORIES = {
+    length: {
+      label: 'Length',
+      units: {
+        mm: { label: 'Millimeters', factor: 0.001 },
+        cm: { label: 'Centimeters', factor: 0.01 },
+        m:  { label: 'Meters', factor: 1 },
+        km: { label: 'Kilometers', factor: 1000 },
+        in: { label: 'Inches', factor: 0.0254 },
+        ft: { label: 'Feet', factor: 0.3048 },
+        yd: { label: 'Yards', factor: 0.9144 },
+        mi: { label: 'Miles', factor: 1609.344 },
+      }
+    },
+    weight: {
+      label: 'Weight',
+      units: {
+        mg:  { label: 'Milligrams', factor: 0.000001 },
+        g:   { label: 'Grams', factor: 0.001 },
+        kg:  { label: 'Kilograms', factor: 1 },
+        t:   { label: 'Metric tons', factor: 1000 },
+        oz:  { label: 'Ounces', factor: 0.0283495 },
+        lb:  { label: 'Pounds', factor: 0.453592 },
+        st:  { label: 'Stone', factor: 6.35029 },
+      }
+    },
+    temperature: {
+      label: 'Temperature',
+      units: {
+        c: { label: 'Celsius', factor: null },
+        f: { label: 'Fahrenheit', factor: null },
+        k: { label: 'Kelvin', factor: null },
+      }
+    },
+    speed: {
+      label: 'Speed',
+      units: {
+        'm/s':  { label: 'Meters/sec', factor: 1 },
+        'km/h': { label: 'Kilometers/hr', factor: 0.277778 },
+        'mph':  { label: 'Miles/hr', factor: 0.44704 },
+        'kn':   { label: 'Knots', factor: 0.514444 },
+        'ft/s': { label: 'Feet/sec', factor: 0.3048 },
+      }
+    },
+    volume: {
+      label: 'Volume',
+      units: {
+        ml:   { label: 'Milliliters', factor: 0.000001 },
+        l:    { label: 'Liters', factor: 0.001 },
+        gal:  { label: 'Gallons (US)', factor: 0.00378541 },
+        qt:   { label: 'Quarts (US)', factor: 0.000946353 },
+        pt:   { label: 'Pints (US)', factor: 0.000473176 },
+        cup:  { label: 'Cups (US)', factor: 0.000236588 },
+        floz: { label: 'Fl oz (US)', factor: 0.0000295735 },
+      }
+    },
+    area: {
+      label: 'Area',
+      units: {
+        mm2: { label: 'Sq. millimeters', factor: 0.000001 },
+        cm2: { label: 'Sq. centimeters', factor: 0.0001 },
+        m2:  { label: 'Sq. meters', factor: 1 },
+        km2: { label: 'Sq. kilometers', factor: 1000000 },
+        ha:  { label: 'Hectares', factor: 10000 },
+        ac:  { label: 'Acres', factor: 4046.86 },
+        in2: { label: 'Sq. inches', factor: 0.00064516 },
+        ft2: { label: 'Sq. feet', factor: 0.092903 },
+      }
+    },
+  };
+
+  let activeCat = 'length';
+
+  function convertTemp(value, from, to) {
+    let celsius;
+    if (from === 'c') celsius = value;
+    else if (from === 'f') celsius = (value - 32) * 5/9;
+    else celsius = value - 273.15;
+    if (to === 'c') return celsius;
+    if (to === 'f') return celsius * 9/5 + 32;
+    return celsius + 273.15;
+  }
+
+  root.appendChild(el(`
+    <div class="unit-cat-row" id="unitCats"></div>
+    <div class="row" style="align-items:flex-end;">
+      <div style="flex:1;">
+        <span class="field-label">From</span>
+        <input type="number" id="unitFrom" value="1" style="font-size:1.1rem; font-weight:600; font-family:'Space Grotesk',sans-serif;" />
+      </div>
+      <div style="flex:1;">
+        <span class="field-label">Unit</span>
+        <select id="unitFromSel"></select>
+      </div>
+    </div>
+    <div style="display:flex; justify-content:center;">
+      <button class="swap-btn" id="unitSwap" title="Swap units">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 16V4m0 12l-3-3m3 3l3-3M17 8v12m0-12l3 3m-3-3l-3 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="row" style="align-items:flex-end;">
+      <div style="flex:1;">
+        <span class="field-label">To</span>
+        <select id="unitToSel"></select>
+      </div>
+    </div>
+    <div class="unit-result-box" id="unitResult">
+      <div class="big">–</div>
+      <div class="small">Enter a value to convert</div>
+    </div>
+    <div class="stat-grid" id="unitQuick"></div>
+  `));
+
+  const catsEl = $('#unitCats', root);
+  const fromInput = $('#unitFrom', root);
+  const fromSel = $('#unitFromSel', root);
+  const toSel = $('#unitToSel', root);
+  const resultEl = $('#unitResult', root);
+  const quickEl = $('#unitQuick', root);
+
+  // build category buttons
+  Object.keys(CATEGORIES).forEach(key => {
+    const btn = el(`<button class="unit-cat-btn" data-cat="${key}">${CATEGORIES[key].label}</button>`);
+    btn.addEventListener('click', () => {
+      activeCat = key;
+      $$('.unit-cat-btn', catsEl).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      populateUnits();
+      convert();
+    });
+    if(key === activeCat) btn.classList.add('active');
+    catsEl.appendChild(btn);
+  });
+
+  function populateUnits(){
+    const cat = CATEGORIES[activeCat];
+    const keys = Object.keys(cat.units);
+    fromSel.innerHTML = '';
+    toSel.innerHTML = '';
+    keys.forEach((k, i) => {
+      fromSel.appendChild(el(`<option value="${k}">${cat.units[k].label}</option>`));
+      toSel.appendChild(el(`<option value="${k}">${cat.units[k].label}</option>`));
+    });
+    // default: second unit for 'to'
+    if(keys.length > 1) toSel.selectedIndex = 1;
+  }
+
+  function convert(){
+    const cat = CATEGORIES[activeCat];
+    const val = parseFloat(fromInput.value);
+    const from = fromSel.value;
+    const to = toSel.value;
+    if(isNaN(val)){
+      resultEl.innerHTML = '<div class="big">–</div><div class="small">Enter a valid number</div>';
+      quickEl.innerHTML = '';
+      return;
+    }
+    let result;
+    if(activeCat === 'temperature'){
+      result = convertTemp(val, from, to);
+    } else {
+      const baseVal = val * cat.units[from].factor;
+      result = baseVal / cat.units[to].factor;
+    }
+    const formatted = Math.abs(result) >= 1000000 || (Math.abs(result) < 0.001 && result !== 0)
+      ? result.toExponential(4)
+      : parseFloat(result.toPrecision(8));
+    resultEl.innerHTML = `<div class="big">${formatted}</div><div class="small">${val} ${cat.units[from].label} = ${formatted} ${cat.units[to].label}</div>`;
+
+    // quick conversions
+    quickEl.innerHTML = '';
+    const keys = Object.keys(cat.units).filter(k => k !== from);
+    keys.slice(0, 5).forEach(k => {
+      let r;
+      if(activeCat === 'temperature') r = convertTemp(val, from, k);
+      else r = (val * cat.units[from].factor) / cat.units[k].factor;
+      const fmt = Math.abs(r) >= 1000000 || (Math.abs(r) < 0.001 && r !== 0)
+        ? r.toExponential(3) : parseFloat(r.toPrecision(6));
+      const box = el(`<div class="stat-box"><div class="num" style="font-size:1rem;">${fmt}</div><div class="lab">${cat.units[k].label}</div></div>`);
+      quickEl.appendChild(box);
+    });
+  }
+
+  fromInput.addEventListener('input', convert);
+  fromSel.addEventListener('change', convert);
+  toSel.addEventListener('change', convert);
+  $('#unitSwap', root).addEventListener('click', () => {
+    const tmp = fromSel.value;
+    fromSel.value = toSel.value;
+    toSel.value = tmp;
+    convert();
+  });
+
+  populateUnits();
+  convert();
 }
