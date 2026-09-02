@@ -84,7 +84,11 @@ function downloadBlob(blob, filename){
 function el(html){
   const t = document.createElement('template');
   t.innerHTML = html.trim();
-  return t.content.firstElementChild;
+  // Return a single element when there's one root, or the full
+  // DocumentFragment when the template contains multiple root elements
+  // (tool render functions emit several siblings).
+  if(t.content.children.length === 1) return t.content.firstElementChild;
+  return t.content;
 }
 
 function copyText(text){
@@ -232,7 +236,7 @@ function renderImageTool(root){
       <strong>Tap to choose an image</strong><br>or drop it here
       <input type="file" id="imgInput" accept="image/*" />
     </label>
-    <div id="imgControls" style="display:none; display:flex; flex-direction:column; gap:16px;">
+    <div id="imgControls" style="display:none; flex-direction:column; gap:16px;">
       <div>
         <span class="field-label">Output format</span>
         <select id="imgFormat">
