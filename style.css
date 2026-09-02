@@ -251,10 +251,11 @@ button{font-family:inherit; cursor:pointer;}
   position:fixed; inset:0; z-index:200;
   background: rgba(3,4,10,0.72);
   backdrop-filter: blur(6px);
-  display:flex; align-items:center; justify-content:center;
+  display:grid; place-items:center;
   opacity:0; pointer-events:none;
   transition: opacity .25s var(--ease);
   padding: 0;
+  overflow-y:auto;
 }
 .modal-overlay.active{ opacity:1; pointer-events:auto; }
 .modal{
@@ -269,9 +270,18 @@ button{font-family:inherit; cursor:pointer;}
 }
 .modal-overlay.active .modal{ transform: translateY(0) scale(1); opacity:1; }
 @media (min-width:640px){
-  .modal-overlay{ padding: 24px; }
-  .modal{ max-height: 86vh; height:auto; border-radius: var(--radius-lg); box-shadow: var(--shadow-glow); }
+  .modal-overlay{ padding: 40px 24px; align-content:center; }
+  .modal{
+    max-height: 82vh; height:auto;
+    min-height: min(360px, 60vh);
+    margin: auto;
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-glow);
+  }
 }
+.modal-body{ scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
+.modal-body::-webkit-scrollbar{ width:6px; }
+.modal-body::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.15); border-radius:4px; }
+.modal-body::-webkit-scrollbar-track{ background:transparent; }
 
 .modal-head{
   display:flex; align-items:center; justify-content:space-between;
