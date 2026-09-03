@@ -58,6 +58,37 @@
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
+/* ---------------- smooth scroll for anchor links ---------------- */
+$$('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', (e) => {
+    const id = a.getAttribute('href');
+    if(!id || id === '#') return;
+    const target = document.querySelector(id);
+    if(target){
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+
+/* ---------------- mobile hamburger menu ---------------- */
+const hamburger = $('#hamburger');
+const mobileNav = $('#mobileNav');
+if(hamburger && mobileNav){
+  hamburger.addEventListener('click', () => {
+    const isOpen = mobileNav.classList.toggle('open');
+    hamburger.classList.toggle('active');
+    hamburger.setAttribute('aria-expanded', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+  });
+}
+function closeMobileNav(){
+  if(mobileNav) mobileNav.classList.remove('open');
+  if(hamburger){ hamburger.classList.remove('active'); hamburger.setAttribute('aria-expanded', 'false'); }
+  document.body.style.overflow = '';
+}
+window.closeMobileNav = closeMobileNav;
+
 function toast(msg){
   const el = $('#toast');
   el.textContent = msg;
@@ -179,9 +210,18 @@ function buildCard(tool){
       <span class="tool-icon" style="--icon-bg:${tool.color.bg}; --icon-color:${tool.color.fg}">${ICONS[tool.icon]}</span>
       <h3>${tool.title}</h3>
       <p>${tool.desc}</p>
+      <span class="tool-card-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M7 17L17 7M17 7H7M17 7v10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     </button>
   `);
   card.addEventListener('click', () => openTool(tool.id));
+  // Mouse tracking glow effect
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    card.style.setProperty('--mouse-x', x + '%');
+    card.style.setProperty('--mouse-y', y + '%');
+  });
   return card;
 }
 
@@ -203,23 +243,289 @@ mountGrids();
   if(reduceMotion) return;
 
   // add reveal class to tool cards and section heads
-  const targets = $$('.tool-card, .section-head, .about-inner');
+  const targets = $$('.tool-card, .section-head, .about-inner, .drop-section, .trust-row');
   targets.forEach(t => t.classList.add('reveal'));
 
   const io = new IntersectionObserver((entries) => {
-    entries.forEach((entry, i) => {
+    entries.forEach((entry) => {
       if(entry.isIntersecting){
-        // stagger siblings
+        // stagger siblings for cards
         const siblings = entry.target.parentElement?.querySelectorAll('.reveal') || [];
         const idx = Array.from(siblings).indexOf(entry.target);
-        entry.target.style.transitionDelay = `${(idx % 6) * 60}ms`;
+        const delay = entry.target.classList.contains('tool-card') ? (idx % 6) * 80 : 0;
+        entry.target.style.transitionDelay = `${delay}ms`;
         entry.target.classList.add('visible');
         io.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+  }, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
 
   targets.forEach(t => io.observe(t));
+})();
+
+/* ---------------- GSAP scroll-triggered animations ---------------- */
+(function initGSAP(){
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduceMotion || typeof gsap === 'undefined') return;
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  // --- Hero section ---
+  const heroTl = gsap.timeline({ delay: 0.3 });
+  heroTl
+    .from('.hero-badge', { y: 30, opacity: 0, duration: 0.7, ease: 'power3.out' })
+    .from('.hero-title', { y: 40, opacity: 0, duration: 0.8, ease: 'power3.out' }, '-=0.4')
+    .from('.hero-sub', { y: 30, opacity: 0, duration: 0.7, ease: 'power3.out' }, '-=0.4')
+    .from('.hero-desc', { y: 25, opacity: 0, duration: 0.7, ease: 'power3.out' }, '-=0.35')
+    .from('.hero-cta', { y: 25, opacity: 0, scale: 0.95, duration: 0.7, ease: 'back.out(1.5)' }, '-=0.3')
+    .from('.hero-stat', { y: 20, opacity: 0, duration: 0.5, ease: 'power3.out', stagger: 0.12 }, '-=0.3')
+    .from('.hero-stat-divider', { scaleY: 0, opacity: 0, duration: 0.3, ease: 'power3.out', stagger: 0.1 }, '-=0.4')
+    .from('.scroll-cue', { opacity: 0, duration: 0.5, ease: 'power2.out' }, '-=0.2');
+
+  // Floating hero icons
+  gsap.from('.hero-float', {
+    y: 40, opacity: 0, scale: 0.7,
+    duration: 0.8, ease: 'back.out(1.7)',
+    stagger: { each: 0.15, from: 'random' },
+    delay: 0.8
+  });
+
+  // --- Hero scroll-scrub parallax ---
+  // Background orbs move at different speeds
+  gsap.to('.bg-orb:nth-child(1)', {
+    y: -180,
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1.5 }
+  });
+  gsap.to('.bg-orb:nth-child(2)', {
+    y: -120, x: 40,
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 2 }
+  });
+  gsap.to('.bg-orb:nth-child(3)', {
+    y: -80, x: -30,
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 2.5 }
+  });
+
+  // Hero content parallax — title moves up faster, fades out
+  gsap.to('.hero-inner', {
+    y: -120, opacity: 0,
+    ease: 'none',
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: '60% top', scrub: 1 }
+  });
+
+  // Floating icons parallax — each at different speed
+  gsap.to('.hero-float:nth-child(1)', {
+    y: -90, rotation: 15,
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1.8 }
+  });
+  gsap.to('.hero-float:nth-child(2)', {
+    y: -140, rotation: -10,
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1.2 }
+  });
+  gsap.to('.hero-float:nth-child(3)', {
+    y: -60, rotation: 20,
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 2.2 }
+  });
+  gsap.to('.hero-float:nth-child(4)', {
+    y: -110, rotation: -15,
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1.5 }
+  });
+  gsap.to('.hero-float:nth-child(5)', {
+    y: -160, rotation: 8,
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 }
+  });
+  gsap.to('.hero-float:nth-child(6)', {
+    y: -70, rotation: -12,
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 2 }
+  });
+
+  // Scroll cue fades out on scroll
+  gsap.to('.scroll-cue', {
+    opacity: 0, y: -20,
+    scrollTrigger: { trigger: '.hero', start: '10% top', end: '25% top', scrub: 1 }
+  });
+
+  // --- Magnetic cursor effect on hero CTA ---
+  const ctaBtn = document.querySelector('.hero-cta');
+  if(ctaBtn){
+    const MAGNETIC_STRENGTH = 0.35;
+    const MAGNETIC_DISTANCE = 120;
+    let ctaBounds = null;
+
+    ctaBtn.addEventListener('mouseenter', (e) => {
+      ctaBounds = ctaBtn.getBoundingClientRect();
+    });
+
+    ctaBtn.addEventListener('mousemove', (e) => {
+      if(!ctaBounds) return;
+      const centerX = ctaBounds.left + ctaBounds.width / 2;
+      const centerY = ctaBounds.top + ctaBounds.height / 2;
+      const distX = e.clientX - centerX;
+      const distY = e.clientY - centerY;
+      const dist = Math.hypot(distX, distY);
+
+      // Only magnetize when cursor is within range
+      if(dist < MAGNETIC_DISTANCE){
+        const strength = MAGNETIC_STRENGTH * (1 - dist / MAGNETIC_DISTANCE);
+        gsap.to(ctaBtn, {
+          x: distX * strength,
+          y: distY * strength,
+          duration: 0.4,
+          ease: 'power2.out'
+        });
+      }
+    });
+
+    ctaBtn.addEventListener('mouseleave', () => {
+      ctaBounds = null;
+      gsap.to(ctaBtn, {
+        x: 0, y: 0,
+        duration: 0.6,
+        ease: 'elastic.out(1, 0.4)'
+      });
+    });
+
+    // Also magnetize the brand mark
+    const brandMark = document.querySelector('.brand-mark');
+    if(brandMark){
+      let brandBounds = null;
+      brandMark.addEventListener('mouseenter', () => {
+        brandBounds = brandMark.getBoundingClientRect();
+      });
+      brandMark.addEventListener('mousemove', (e) => {
+        if(!brandBounds) return;
+        const cx = brandBounds.left + brandBounds.width / 2;
+        const cy = brandBounds.top + brandBounds.height / 2;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        const d = Math.hypot(dx, dy);
+        if(d < 60){
+          const s = 0.5 * (1 - d / 60);
+          gsap.to(brandMark, { x: dx * s, y: dy * s, duration: 0.3, ease: 'power2.out' });
+        }
+      });
+      brandMark.addEventListener('mouseleave', () => {
+        brandBounds = null;
+        gsap.to(brandMark, { x: 0, y: 0, duration: 0.5, ease: 'elastic.out(1, 0.5)' });
+      });
+    }
+  }
+
+  // --- Section headings ---
+  gsap.utils.toArray('.section-head').forEach(head => {
+    gsap.from(head, {
+      scrollTrigger: { trigger: head, start: 'top 85%', toggleActions: 'play none none none' },
+      y: 40, opacity: 0, duration: 0.7, ease: 'power3.out'
+    });
+  });
+
+  // --- Tool cards --- staggered entrance on scroll
+  const popularCards = gsap.utils.toArray('#popular-grid .tool-card');
+  const advancedCards = gsap.utils.toArray('#advanced-grid .tool-card');
+
+  if(popularCards.length){
+    gsap.from(popularCards, {
+      scrollTrigger: {
+        trigger: '#popular-grid',
+        start: 'top 82%',
+        toggleActions: 'play none none none'
+      },
+      y: 50, opacity: 0, scale: 0.95,
+      duration: 0.6,
+      ease: 'power3.out',
+      stagger: { each: 0.08, grid: 'auto', from: 'start' }
+    });
+  }
+
+  if(advancedCards.length){
+    gsap.from(advancedCards, {
+      scrollTrigger: {
+        trigger: '#advanced-grid',
+        start: 'top 82%',
+        toggleActions: 'play none none none'
+      },
+      y: 50, opacity: 0, scale: 0.95,
+      duration: 0.6,
+      ease: 'power3.out',
+      stagger: { each: 0.08, grid: 'auto', from: 'start' }
+    });
+  }
+
+  // --- Tool card hover micro-interaction with GSAP ---
+  $$('.tool-card').forEach(card => {
+    card.addEventListener('mouseenter', () => {
+      gsap.to(card.querySelector('.tool-icon'), {
+        scale: 1.15, rotation: -5,
+        duration: 0.35, ease: 'back.out(2)'
+      });
+    });
+    card.addEventListener('mouseleave', () => {
+      gsap.to(card.querySelector('.tool-icon'), {
+        scale: 1, rotation: 0,
+        duration: 0.3, ease: 'power2.out'
+      });
+    });
+  });
+
+  // --- Klyro Drop section ---
+  const dropTrigger = $('.drop-trigger');
+  if(dropTrigger){
+    gsap.from(dropTrigger, {
+      scrollTrigger: {
+        trigger: dropTrigger,
+        start: 'top 85%',
+        toggleActions: 'play none none none'
+      },
+      y: 40, opacity: 0, duration: 0.7, ease: 'power3.out'
+    });
+  }
+
+  // --- About section ---
+  const aboutInner = $('.about-inner');
+  if(aboutInner){
+    gsap.from(aboutInner, {
+      scrollTrigger: {
+        trigger: aboutInner,
+        start: 'top 82%',
+        toggleActions: 'play none none none'
+      },
+      y: 40, opacity: 0, duration: 0.8, ease: 'power3.out'
+    });
+  }
+
+  // Trust indicators
+  const trustItems = gsap.utils.toArray('.trust-item');
+  if(trustItems.length){
+    gsap.from(trustItems, {
+      scrollTrigger: {
+        trigger: '.trust-row',
+        start: 'top 88%',
+        toggleActions: 'play none none none'
+      },
+      y: 20, opacity: 0, duration: 0.5, ease: 'power3.out',
+      stagger: 0.12
+    });
+  }
+
+  // --- Footer ---
+  const footerGrid = $('.footer-grid');
+  if(footerGrid){
+    gsap.from('.footer-brand', {
+      scrollTrigger: { trigger: footerGrid, start: 'top 90%' },
+      y: 30, opacity: 0, duration: 0.6, ease: 'power3.out'
+    });
+    gsap.from('.footer-col', {
+      scrollTrigger: { trigger: footerGrid, start: 'top 90%' },
+      y: 30, opacity: 0, duration: 0.6, ease: 'power3.out',
+      stagger: 0.1
+    });
+  }
+
+  // --- Brand mark entrance ---
+  gsap.from('.brand-mark', {
+    rotation: -15, scale: 0.8, opacity: 0,
+    duration: 0.6, ease: 'back.out(2)',
+    delay: 0.2
+  });
 })();
 
 /* ---------------- modal system ---------------- */
@@ -227,36 +533,150 @@ const overlay = $('#modalOverlay');
 const modalBody = $('#modalBody');
 const modalTitle = $('#modalTitle');
 const modalIcon = $('#modalIcon');
+const modalEl = overlay.querySelector('.modal');
 let activeCleanup = null;
+let modalAnim = null; // track active GSAP timeline
 
 function openTool(id){
   const tool = TOOLS.find(t => t.id === id);
   if(!tool) return;
+
+  // Kill any running modal animation
+  if(modalAnim){ modalAnim.kill(); modalAnim = null; }
+
   modalTitle.textContent = tool.title;
   modalIcon.innerHTML = ICONS[tool.icon];
   modalIcon.style.setProperty('--icon-bg', tool.color.bg);
   modalIcon.style.setProperty('--icon-color', tool.color.fg);
   modalBody.innerHTML = '';
   if(typeof activeCleanup === 'function') { activeCleanup(); activeCleanup = null; }
-  try{
-    const maybeCleanup = tool.render(modalBody);
-    if(typeof maybeCleanup === 'function') activeCleanup = maybeCleanup;
-  }catch(err){
-    console.error(`[Klyro] "${tool.title}" failed to load:`, err);
-    modalBody.innerHTML = '';
-    modalBody.appendChild(el(`
-      <div class="result-box" style="background:rgba(255,107,107,0.08); border-color:rgba(255,107,107,0.25);">
-        <span>This tool hit an error loading. Check your internet connection and try reopening it — if it keeps happening, open your browser's console (F12) and share the red error text.</span>
-      </div>
-    `));
-  }
+
+  // Insert skeleton loader immediately
+  const skeleton = el(`
+    <div class="skeleton-wrap" id="modalSkeleton">
+      <div class="skeleton-line h"></div>
+      <div class="skeleton-line input"></div>
+      <div class="skeleton-line row"><div></div><div></div></div>
+      <div class="skeleton-line text"></div>
+      <div class="skeleton-line stat"></div>
+      <div class="skeleton-line btn"></div>
+    </div>
+  `);
+  modalBody.appendChild(skeleton);
+
+  // Show overlay immediately with skeleton
   overlay.classList.add('active');
   document.body.style.overflow = 'hidden';
+
+  // Render actual tool content after a brief skeleton display
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const skelEl = $('#modalSkeleton');
+      if(skelEl){
+        skelEl.classList.add('transitioning');
+      }
+
+      setTimeout(() => {
+        // Remove skeleton
+        const oldSkeleton = $('#modalSkeleton');
+        if(oldSkeleton) oldSkeleton.remove();
+
+        // Render actual tool
+        try{
+          const maybeCleanup = tool.render(modalBody);
+          if(typeof maybeCleanup === 'function') activeCleanup = maybeCleanup;
+        }catch(err){
+          console.error(`[Klyro] "${tool.title}" failed to load:`, err);
+          modalBody.innerHTML = '';
+          modalBody.appendChild(el(`
+            <div class="result-box" style="background:rgba(255,107,107,0.08); border-color:rgba(255,107,107,0.25);">
+              <span>This tool hit an error loading. Check your internet connection and try reopening it.</span>
+            </div>
+          `));
+        }
+
+        // Animate real content in
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if(!reduceMotion && typeof gsap !== 'undefined' && modalBody.children.length){
+          gsap.fromTo(modalBody.children,
+            { y: 12, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.35, ease: 'power3.out', stagger: 0.05 }
+          );
+        }
+      }, 350);
+    });
+  });
+
+  // GSAP entrance animation
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!reduceMotion && typeof gsap !== 'undefined'){
+    modalAnim = gsap.timeline();
+
+    // Overlay backdrop fade
+    modalAnim.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+
+    // Modal container
+    modalAnim.fromTo(modalEl,
+      { y: 60, scale: 0.96, opacity: 0 },
+      { y: 0, scale: 1, opacity: 1, duration: 0.45, ease: 'back.out(1.4)' },
+      '-=0.15'
+    );
+
+    // Modal head elements
+    modalAnim.fromTo(modalIcon,
+      { scale: 0.5, rotation: -15, opacity: 0 },
+      { scale: 1, rotation: 0, opacity: 1, duration: 0.4, ease: 'back.out(2)' },
+      '-=0.2'
+    );
+    modalAnim.fromTo(modalTitle,
+      { x: -15, opacity: 0 },
+      { x: 0, opacity: 1, duration: 0.35, ease: 'power3.out' },
+      '-=0.25'
+    );
+
+    // Modal body children — staggered entrance
+    const bodyChildren = modalBody.children;
+    if(bodyChildren.length){
+      modalAnim.fromTo(bodyChildren,
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out', stagger: 0.06 },
+        '-=0.15'
+      );
+    }
+  }
 }
+
 function closeModal(){
-  overlay.classList.remove('active');
-  document.body.style.overflow = '';
-  if(typeof activeCleanup === 'function'){ activeCleanup(); activeCleanup = null; }
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if(!reduceMotion && typeof gsap !== 'undefined' && overlay.classList.contains('active')){
+    if(modalAnim){ modalAnim.kill(); modalAnim = null; }
+
+    const exitTl = gsap.timeline({
+      onComplete: () => {
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+        if(typeof activeCleanup === 'function'){ activeCleanup(); activeCleanup = null; }
+      }
+    });
+
+    // Modal content exit
+    exitTl.to(modalBody.children, {
+      y: -10, opacity: 0, duration: 0.2, ease: 'power2.in',
+      stagger: 0.03
+    });
+    exitTl.to(modalEl, {
+      y: 40, scale: 0.97, opacity: 0, duration: 0.3, ease: 'power3.in'
+    }, '-=0.1');
+    exitTl.to(overlay, {
+      opacity: 0, duration: 0.25, ease: 'power2.in'
+    }, '-=0.2');
+  } else {
+    // Fallback: instant close
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+    if(typeof activeCleanup === 'function'){ activeCleanup(); activeCleanup = null; }
+  }
 }
 $('#modalClose').addEventListener('click', closeModal);
 overlay.addEventListener('click', (e) => { if(e.target === overlay) closeModal(); });

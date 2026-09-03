@@ -128,6 +128,7 @@
 <body>
 
 <canvas id="fx" aria-hidden="true"></canvas>
+<div class="bg-orbs" aria-hidden="true"><div class="bg-orb"></div><div class="bg-orb"></div><div class="bg-orb"></div></div>
 
 <header class="topbar" role="banner">
   <div class="topbar-inner">
@@ -140,8 +141,16 @@
       <a href="#advanced">Advanced</a>
       <a href="#about">About</a>
     </nav>
+    <button class="hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </header>
+<nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
+  <a href="#popular" onclick="closeMobileNav()">Tools</a>
+  <a href="#advanced" onclick="closeMobileNav()">Advanced</a>
+  <a href="#about" onclick="closeMobileNav()">About</a>
+</nav>
 
 <main>
 
@@ -155,13 +164,33 @@
       <div class="hero-float"><svg viewBox="0 0 24 24" fill="none"><path d="M4 16l4-10 4 10M5.5 12.5h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 9h3.5a2 2 0 1 1 0 4H14V9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
     </div>
     <div class="hero-inner">
-      <h1 class="hero-title">Built by <span class="grad">Navi
-      </span></h1>
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        13 free browser tools
+      </div>
+      <h1 class="hero-title">Built by <span class="grad">Navi</span></h1>
       <p class="hero-sub">100% free · no login · no ads · nothing to install</p>
-      <p class="hero-desc">Every tool below runs right in your browser. Your files never leave your device.</p>
+      <p class="hero-desc">Every tool runs in your browser. Your files never leave your device — total privacy, zero cost.</p>
       <a href="#popular" class="hero-cta">
         <span>Start using a tool</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-num">13</div>
+          <div class="hero-stat-label">Free Tools</div>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">0</div>
+          <div class="hero-stat-label">File Uploads</div>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">100%</div>
+          <div class="hero-stat-label">Private</div>
+        </div>
+      </div>
     </div>
     <div class="scroll-cue" aria-hidden="true"><span></span></div>
   </section>
@@ -213,20 +242,76 @@
     <div class="about-inner">
       <h2 id="about-heading">Why Klyro is free</h2>
       <p>Klyro was built because we got tired of finding a simple tool online only to be asked to pay or create an account. So we made our own — no tricks, no paywalls, no annoying ads.</p>
-      <p style="margin-top:12px;">Every tool on Klyro runs entirely in your browser using JavaScript. Your files are processed on your own device and never get uploaded to any server. That means <strong>your data stays private</strong>, and we have zero hosting costs for file processing — which is why we can keep everything free, forever.</p>
-      <p style="margin-top:12px;">Whether you need to compress an image, merge PDFs, generate a QR code, or convert units — just open the tool and go. No signup. No waiting. Just works.</p>
+      <p style="margin-top:14px;">Every tool runs entirely in your browser using JavaScript. Your files are processed on your own device and never get uploaded to any server. That means <strong>your data stays private</strong>, and we have zero hosting costs — which is why we can keep everything free, forever.</p>
+      <p style="margin-top:14px;">Whether you need to compress an image, merge PDFs, generate a QR code, or convert units — just open the tool and go. No signup. No waiting. Just works.</p>
+      <div class="trust-row">
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.7"/></svg>
+          <span>Files never leave your device</span>
+        </div>
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M22 4 12 14.01l-3-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>100% free, forever</span>
+        </div>
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.7"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          <span>Instant — no waiting</span>
+        </div>
+      </div>
     </div>
   </section>
 
 </main>
 
 <footer class="site-footer" role="contentinfo">
-  <p>Built by <strong>Klyro</strong> · free, forever</p>
-  <nav aria-label="Footer navigation" style="margin-top:8px; display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
-    <a href="#popular">Tools</a>
-    <a href="#advanced">Advanced</a>
-    <a href="#about">About</a>
-  </nav>
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <h3>
+          <span class="brand-mark" aria-hidden="true">K</span>
+          Klyro
+        </h3>
+        <p>Free online tools that run entirely in your browser. No signups, no ads, no file uploads — just instant, private utilities.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Popular Tools</h4>
+        <ul>
+          <li><a href="#popular">Image Compressor</a></li>
+          <li><a href="#popular">QR Code Generator</a></li>
+          <li><a href="#popular">Word Counter</a></li>
+          <li><a href="#popular">Password Generator</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Advanced Tools</h4>
+        <ul>
+          <li><a href="#advanced">Merge PDFs</a></li>
+          <li><a href="#advanced">PDF Organizer</a></li>
+          <li><a href="#advanced">JSON ⇄ CSV</a></li>
+          <li><a href="#advanced">Unit Converter</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Project</h4>
+        <ul>
+          <li><a href="#about">About Klyro</a></li>
+          <li><a href="https://github.com/navilesh-creat/Klyro" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="#popular">All Tools</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>Built by <strong>Klyro</strong> · free, forever</span>
+      <div class="footer-social">
+        <a href="https://github.com/navilesh-creat/Klyro" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        </a>
+        <a href="https://twitter.com" target="_blank" rel="noopener" aria-label="Twitter">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
 </footer>
 
 <!-- Modal -->
@@ -260,6 +345,8 @@
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
