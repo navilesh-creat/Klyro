@@ -412,10 +412,13 @@ mountGrids();
 
   // --- Section headings ---
   gsap.utils.toArray('.section-head').forEach(head => {
-    gsap.from(head, {
-      scrollTrigger: { trigger: head, start: 'top 85%', toggleActions: 'play none none none' },
-      y: 40, opacity: 0, duration: 0.7, ease: 'power3.out'
-    });
+    gsap.fromTo(head,
+      { y: 30, opacity: 0 },
+      {
+        scrollTrigger: { trigger: head, start: 'top 90%', toggleActions: 'play none none none' },
+        y: 0, opacity: 1, duration: 0.6, ease: 'power3.out'
+      }
+    );
   });
 
   // --- Tool cards --- staggered entrance on scroll
@@ -423,31 +426,37 @@ mountGrids();
   const advancedCards = gsap.utils.toArray('#advanced-grid .tool-card');
 
   if(popularCards.length){
-    gsap.from(popularCards, {
-      scrollTrigger: {
-        trigger: '#popular-grid',
-        start: 'top 82%',
-        toggleActions: 'play none none none'
-      },
-      y: 50, opacity: 0, scale: 0.95,
-      duration: 0.6,
-      ease: 'power3.out',
-      stagger: { each: 0.08, grid: 'auto', from: 'start' }
-    });
+    gsap.fromTo(popularCards,
+      { y: 40, opacity: 0, scale: 0.97 },
+      {
+        scrollTrigger: {
+          trigger: '#popular-grid',
+          start: 'top 88%',
+          toggleActions: 'play none none none'
+        },
+        y: 0, opacity: 1, scale: 1,
+        duration: 0.5,
+        ease: 'power3.out',
+        stagger: { each: 0.06, from: 'start' }
+      }
+    );
   }
 
   if(advancedCards.length){
-    gsap.from(advancedCards, {
-      scrollTrigger: {
-        trigger: '#advanced-grid',
-        start: 'top 82%',
-        toggleActions: 'play none none none'
-      },
-      y: 50, opacity: 0, scale: 0.95,
-      duration: 0.6,
-      ease: 'power3.out',
-      stagger: { each: 0.08, grid: 'auto', from: 'start' }
-    });
+    gsap.fromTo(advancedCards,
+      { y: 40, opacity: 0, scale: 0.97 },
+      {
+        scrollTrigger: {
+          trigger: '#advanced-grid',
+          start: 'top 88%',
+          toggleActions: 'play none none none'
+        },
+        y: 0, opacity: 1, scale: 1,
+        duration: 0.5,
+        ease: 'power3.out',
+        stagger: { each: 0.06, from: 'start' }
+      }
+    );
   }
 
   // --- Tool card hover micro-interaction with GSAP ---
@@ -469,55 +478,87 @@ mountGrids();
   // --- Klyro Drop section ---
   const dropTrigger = $('.drop-trigger');
   if(dropTrigger){
-    gsap.from(dropTrigger, {
-      scrollTrigger: {
-        trigger: dropTrigger,
-        start: 'top 85%',
-        toggleActions: 'play none none none'
-      },
-      y: 40, opacity: 0, duration: 0.7, ease: 'power3.out'
-    });
+    gsap.fromTo(dropTrigger,
+      { y: 30, opacity: 0 },
+      {
+        scrollTrigger: { trigger: dropTrigger, start: 'top 90%', toggleActions: 'play none none none' },
+        y: 0, opacity: 1, duration: 0.6, ease: 'power3.out'
+      }
+    );
   }
 
   // --- About section ---
   const aboutInner = $('.about-inner');
   if(aboutInner){
-    gsap.from(aboutInner, {
-      scrollTrigger: {
-        trigger: aboutInner,
-        start: 'top 82%',
-        toggleActions: 'play none none none'
-      },
-      y: 40, opacity: 0, duration: 0.8, ease: 'power3.out'
-    });
+    gsap.fromTo(aboutInner,
+      { y: 30, opacity: 0 },
+      {
+        scrollTrigger: { trigger: aboutInner, start: 'top 90%', toggleActions: 'play none none none' },
+        y: 0, opacity: 1, duration: 0.7, ease: 'power3.out'
+      }
+    );
   }
 
   // Trust indicators
   const trustItems = gsap.utils.toArray('.trust-item');
   if(trustItems.length){
-    gsap.from(trustItems, {
-      scrollTrigger: {
-        trigger: '.trust-row',
-        start: 'top 88%',
-        toggleActions: 'play none none none'
-      },
-      y: 20, opacity: 0, duration: 0.5, ease: 'power3.out',
-      stagger: 0.12
-    });
+    gsap.fromTo(trustItems,
+      { y: 15, opacity: 0 },
+      {
+        scrollTrigger: { trigger: '.trust-row', start: 'top 92%', toggleActions: 'play none none none' },
+        y: 0, opacity: 1, duration: 0.5, ease: 'power3.out', stagger: 0.1
+      }
+    );
   }
 
   // --- Footer ---
   const footerGrid = $('.footer-grid');
   if(footerGrid){
-    gsap.from('.footer-brand', {
-      scrollTrigger: { trigger: footerGrid, start: 'top 90%' },
-      y: 30, opacity: 0, duration: 0.6, ease: 'power3.out'
+    gsap.fromTo('.footer-brand',
+      { y: 25, opacity: 0 },
+      { scrollTrigger: { trigger: footerGrid, start: 'top 95%' }, y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }
+    );
+    gsap.fromTo('.footer-col',
+      { y: 25, opacity: 0 },
+      { scrollTrigger: { trigger: footerGrid, start: 'top 95%' }, y: 0, opacity: 1, duration: 0.6, ease: 'power3.out', stagger: 0.08 }
+    );
+  }
+
+  // --- Newsletter CTA ---
+  const ctaInner = $('.cta-inner');
+  if(ctaInner){
+    const ctaTl = gsap.timeline({
+      scrollTrigger: { trigger: '.cta-section', start: 'top 85%', toggleActions: 'play none none none' }
     });
-    gsap.from('.footer-col', {
-      scrollTrigger: { trigger: footerGrid, start: 'top 90%' },
-      y: 30, opacity: 0, duration: 0.6, ease: 'power3.out',
-      stagger: 0.1
-    });
+    ctaTl
+      .fromTo('.cta-badge', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' })
+      .fromTo('.cta-title', { y: 25, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, '-=0.3')
+      .fromTo('.cta-desc', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, '-=0.3')
+      .fromTo('.cta-form', { y: 20, opacity: 0, scale: 0.98 }, { y: 0, opacity: 1, scale: 1, duration: 0.5, ease: 'back.out(1.3)' }, '-=0.25')
+      .fromTo('.cta-social-proof', { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' }, '-=0.2');
+
+    // Magnetic effect on subscribe button
+    const ctaBtn = $('.cta-btn');
+    if(ctaBtn){
+      let btnBounds = null;
+      ctaBtn.addEventListener('mouseenter', () => { btnBounds = ctaBtn.getBoundingClientRect(); });
+      ctaBtn.addEventListener('mousemove', (e) => {
+        if(!btnBounds) return;
+        const cx = btnBounds.left + btnBounds.width / 2;
+        const cy = btnBounds.top + btnBounds.height / 2;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        const d = Math.hypot(dx, dy);
+        if(d < 80){
+          const s = 0.3 * (1 - d / 80);
+          gsap.to(ctaBtn, { x: dx * s, y: dy * s, duration: 0.3, ease: 'power2.out' });
+        }
+      });
+      ctaBtn.addEventListener('mouseleave', () => {
+        btnBounds = null;
+        gsap.to(ctaBtn, { x: 0, y: 0, duration: 0.5, ease: 'elastic.out(1, 0.5)' });
+      });
+    }
   }
 
   // --- Brand mark entrance ---
@@ -525,6 +566,41 @@ mountGrids();
     rotation: -15, scale: 0.8, opacity: 0,
     duration: 0.6, ease: 'back.out(2)',
     delay: 0.2
+  });
+})();
+
+/* ---------------- newsletter CTA ---------------- */
+(function initCTA(){
+  const form = $('#ctaForm');
+  const emailInput = $('#ctaEmail');
+  const submitBtn = $('#ctaSubmit');
+  if(!form) return;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = emailInput.value.trim();
+    if(!email || !email.includes('@')){
+      toast('Please enter a valid email');
+      return;
+    }
+
+    // Animate button
+    submitBtn.innerHTML = '<span>Subscribed!</span>';
+    submitBtn.style.background = 'var(--green)';
+    submitBtn.disabled = true;
+    emailInput.disabled = true;
+
+    // Show success
+    setTimeout(() => {
+      const wrap = form.closest('.cta-inner');
+      form.replaceWith(el(`
+        <div class="cta-success">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M22 4 12 14.01l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>You're on the list! We'll only email you about new tools.</span>
+        </div>
+      `));
+      toast('Thanks for subscribing!');
+    }, 600);
   });
 })();
 
